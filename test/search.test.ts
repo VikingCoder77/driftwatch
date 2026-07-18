@@ -107,4 +107,30 @@ describe("findCandidates", () => {
     });
     expect(candidates[1]).toEqual({ path: "docs/noisy.md", matchCount: 4 });
   });
+
+  it("keeps implementation files ahead of tests and documentation", async () => {
+    const runner = vi.fn<SearchRunner>().mockResolvedValue({
+      stdout: [
+        weightedMatchEvent("test/service.test.ts", [
+          "lastCheckedCommit",
+          "lastCheckedCommit",
+          "lastCheckedCommit",
+        ]),
+        weightedMatchEvent("docs/PRD.md", [
+          "lastCheckedCommit",
+          "lastCheckedCommit",
+        ]),
+        weightedMatchEvent("scripts/render.sh", ["lastCheckedCommit"]),
+        weightedMatchEvent("src/service.ts", ["lastCheckedCommit"]),
+      ].join("\n"),
+      stderr: "",
+      exitCode: 0,
+    });
+
+    await expect(findCandidates("/repo", claim, { runner })).resolves.toEqual([
+      { path: "scripts/render.sh", matchCount: 1_000 },
+      { path: "src/service.ts", matchCount: 1_000 },
+      { path: "test/service.test.ts", matchCount: 3_000 },
+    ]);
+  });
 });

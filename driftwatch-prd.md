@@ -71,7 +71,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 
 - R19: For each claim, driftwatch derives search terms by extracting distinctive tokens from the claim text (identifiers, quoted strings, numbers, capitalized nouns; common English stopwords excluded).
 - R20: Candidate files are found by running ripgrep (`rg`) with those terms over the repository, excluding `.driftwatch/`, `.git/`, `node_modules/`, and paths matched by `.gitignore`.
-- R21: At most 3 candidate files are passed to verification per claim, ranked by a deterministic weighted match score in which exact identifiers decisively outrank quoted values, numbers, capitalized nouns, and generic tokens; ties are resolved by path.
+- R21: At most 3 candidate files are passed to verification per claim. Implementation-capable paths rank ahead of tests and documentation, then a deterministic weighted match score makes exact identifiers decisively outrank quoted values, numbers, capitalized nouns, and generic tokens; ties are resolved by path.
 - R22: If ripgrep finds no candidates for a claim, the claim is recorded directly as `NOT_FOUND` without any model call.
 
 ### 5.5 Verification

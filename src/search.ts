@@ -77,6 +77,8 @@ interface WeightedSearchTerm {
   weight: number;
 }
 
+const DOCUMENTATION_EXTENSIONS = new Set(["adoc", "md", "mdx", "rst"]);
+
 export const runRipgrep: SearchRunner = (args, cwd) =>
   new Promise((resolve, reject) => {
     const child = spawn("rg", args, {
@@ -176,6 +178,21 @@ function isSearchablePath(path: string): boolean {
     normalizedPath.startsWith("node_modules/") ||
     normalizedPath.includes("/node_modules/")
   );
+}
+
+function candidatePathPriority(path: string): number {
+  const normalizedPath = path.replaceAll("\\", "/").toLowerCase();
+  const fileName = normalizedPath.split("/").at(-1) ?? normalizedPath;
+  const extension = fileName.split(".").at(-1) ?? "";
+  const segments = normalizedPath.split("/");
+  const isTest =
+    segments.some((segment) =>
+      ["__tests__", "test", "tests"].includes(segment),
+    ) || /\.(spec|test)\.[^.]+$/.test(fileName);
+  const isDocumentation =
+    DOCUMENTATION_EXTENSIONS.has(extension) ||
+    /^(changelog|license|readme)(\.|$)/.test(fileName);
+  return isTest || isDocumentation ? 0 : 1;
 }
 
 function parseMatchCounts(
@@ -289,6 +306,7 @@ export async function findCandidates(
     .map(([path, matchCount]) => ({ path, matchCount }))
     .sort(
       (left, right) =>
+        candidatePathPriority(right.path) - candidatePathPriority(left.path) ||
         right.matchCount - left.matchCount ||
         left.path.localeCompare(right.path),
     )
