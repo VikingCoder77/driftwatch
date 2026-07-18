@@ -1,6 +1,6 @@
 import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { type Backend, CodexBackend } from "../backend.js";
+import { type Backend, createBackend } from "../backend.js";
 import { mapConcurrent } from "../concurrency.js";
 import { OperationalError } from "../errors.js";
 import { extractClaims } from "../extract.js";
@@ -61,8 +61,7 @@ export async function ingestCommand(
   const prd = await readPrd(requestedPrdPath);
   const initialCommit = await getCurrentCommit(root);
   const backend =
-    dependencies.createBackend?.(config, root) ??
-    new CodexBackend(config.model, root);
+    dependencies.createBackend?.(config, root) ?? createBackend(config, root);
   const claims = await extractClaims(prd.content, backend);
   const entries = await mapConcurrent(
     claims,

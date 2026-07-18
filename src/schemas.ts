@@ -44,10 +44,17 @@ export const MappingEntrySchema = VerificationResultSchema.extend({
 
 export const MappingSchema = z.record(z.string(), MappingEntrySchema);
 
+export const BackendNameSchema = z.enum([
+  "codex",
+  "opencode",
+  "claude-code",
+  "antigravity",
+]);
+
 export const ConfigSchema = z
   .object({
-    backend: z.literal("codex"),
-    model: z.string().min(1),
+    backend: BackendNameSchema,
+    model: z.string().min(1).nullable(),
     prdPath: z.string().min(1).nullable(),
   })
   .strict();
@@ -59,6 +66,7 @@ export const StateSchema = z
   .strict();
 
 export type Claim = z.infer<typeof ClaimSchema>;
+export type BackendName = z.infer<typeof BackendNameSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 export type MappingEntry = z.infer<typeof MappingEntrySchema>;
 export type State = z.infer<typeof StateSchema>;

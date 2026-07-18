@@ -1,8 +1,9 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { checkCommand } from "./commands/check.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
 import { reportCommand } from "./commands/report.js";
+import { type BackendName, BackendNameSchema } from "./schemas.js";
 
 export function createProgram(cwd = process.cwd()): Command {
   const program = new Command()
@@ -13,8 +14,14 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("init")
     .description("Initialize Driftwatch state in the repository")
-    .action(async () => {
-      const directory = await initCommand(cwd);
+    .addOption(
+      new Option("-b, --backend <backend>", "inference harness")
+        .choices([...BackendNameSchema.options])
+        .default("codex"),
+    )
+    .option("-m, --model <model>", "harness model name")
+    .action(async (options: { backend: BackendName; model?: string }) => {
+      const directory = await initCommand(cwd, options);
       process.stdout.write(`Initialized ${directory}\n`);
     });
 

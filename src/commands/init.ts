@@ -3,11 +3,24 @@ import { join } from "node:path";
 import { OperationalError } from "../errors.js";
 import { findGitRoot } from "../git.js";
 import { formatJson } from "../json.js";
-import type { Config, State } from "../schemas.js";
+import type { BackendName, Config, State } from "../schemas.js";
 
-const DEFAULT_MODEL = "gpt-5.6-sol";
+const DEFAULT_MODELS: Record<BackendName, string | null> = {
+  codex: "gpt-5.6-sol",
+  opencode: null,
+  "claude-code": null,
+  antigravity: null,
+};
 
-export async function initCommand(cwd: string): Promise<string> {
+export interface InitOptions {
+  backend?: BackendName;
+  model?: string;
+}
+
+export async function initCommand(
+  cwd: string,
+  options: InitOptions = {},
+): Promise<string> {
   const root = await findGitRoot(cwd);
   const driftwatchDirectory = join(root, ".driftwatch");
 
@@ -25,9 +38,10 @@ export async function initCommand(cwd: string): Promise<string> {
     });
   }
 
+  const backend = options.backend ?? "codex";
   const config: Config = {
-    backend: "codex",
-    model: DEFAULT_MODEL,
+    backend,
+    model: options.model ?? DEFAULT_MODELS[backend],
     prdPath: null,
   };
   const state: State = {};

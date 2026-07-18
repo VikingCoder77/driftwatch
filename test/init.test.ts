@@ -69,4 +69,36 @@ describe("initCommand", () => {
     );
     await expect(readFile(marker, "utf8")).resolves.toBe("keep");
   });
+
+  it.each(["opencode", "claude-code", "antigravity"] as const)(
+    "uses the %s harness default model",
+    async (backend) => {
+      const repository = await createRepository();
+
+      const createdDirectory = await initCommand(repository, { backend });
+      const config = JSON.parse(
+        await readFile(join(createdDirectory, "config.json"), "utf8"),
+      );
+
+      expect(config).toEqual({ backend, model: null, prdPath: null });
+    },
+  );
+
+  it("stores an explicitly selected harness model", async () => {
+    const repository = await createRepository();
+
+    const createdDirectory = await initCommand(repository, {
+      backend: "claude-code",
+      model: "sonnet",
+    });
+    const config = JSON.parse(
+      await readFile(join(createdDirectory, "config.json"), "utf8"),
+    );
+
+    expect(config).toEqual({
+      backend: "claude-code",
+      model: "sonnet",
+      prdPath: null,
+    });
+  });
 });
