@@ -44,11 +44,20 @@ The explicit script shell is needed because the managed environment's reduced `P
 
 ## Immediate Next Steps
 
-1. Retest a minimal live `codex exec` invocation; nested execution previously exited with status 137, but the user reports it should now work.
-2. Exercise live claim extraction with a tiny isolated fixture before running the full PRD.
+1. Resolve the shipped model slug: the PRD and `init` currently use `gpt-5.6`, while the live ChatGPT Codex catalog requires an explicit variant such as `gpt-5.6-sol`.
+2. Decide whether to repair the broken Homebrew `codex` symlink or document adding the ChatGPT resource directory to `PATH`.
 3. Add the required `demo/` service, demo PRD, and at least three genuine seeded violations.
 4. Run `ingest` and `report` against the demo, tune prompts, and ensure zero false `VIOLATED` results.
 5. Improve README packaging instructions and add the required judge-focused demo assets.
+
+## Live Codex Validation
+
+- YOLO-mode nested `codex exec` is functional with the Codex binary bundled in ChatGPT: `/Applications/ChatGPT.app/Contents/Resources/codex` (`0.145.0-alpha.18`).
+- The Homebrew link `/opt/homebrew/bin/codex` is broken because its `0.130.0` target directory contains no executable.
+- The generic model slug `gpt-5.6` returns HTTP 400 for ChatGPT-authenticated Codex.
+- The refreshed local catalog lists `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna`; a direct `gpt-5.6-sol` probe completed successfully.
+- A real Driftwatch smoke test completed in `/tmp/driftwatch-live.pRxcW1` after setting the fixture config model to `gpt-5.6-sol` and placing the ChatGPT resource directory on `PATH`.
+- Live extraction produced one valid claim, verification mapped it to `service.ts:1-3` as `SATISFIED`, `.driftwatch/DRIFT.md` was written, and `report` exited with code 0.
 
 ## Resume Instructions
 
