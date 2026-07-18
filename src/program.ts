@@ -2,13 +2,7 @@ import { Command } from "commander";
 import { checkCommand } from "./commands/check.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
-import { OperationalError } from "./errors.js";
-
-function unavailable(command: string): never {
-  throw new OperationalError(
-    `${command} is not available in this foundation build yet`,
-  );
-}
+import { reportCommand } from "./commands/report.js";
 
 export function createProgram(cwd = process.cwd()): Command {
   const program = new Command()
@@ -50,7 +44,13 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("report")
     .description("Render the current drift report")
-    .action(() => unavailable("report"));
+    .action(async () => {
+      const report = await reportCommand(cwd);
+      process.stdout.write(report.content);
+      if (report.hasViolations) {
+        process.exitCode = 1;
+      }
+    });
 
   return program;
 }

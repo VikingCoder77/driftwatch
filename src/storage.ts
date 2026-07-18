@@ -13,7 +13,12 @@ export type DriftwatchFileName =
   | "mapping.json"
   | "state.json";
 
-function driftwatchPath(root: string, fileName: DriftwatchFileName): string {
+export type DriftwatchTextFileName = "DRIFT.md";
+
+function driftwatchPath(
+  root: string,
+  fileName: DriftwatchFileName | DriftwatchTextFileName,
+): string {
   return join(root, DRIFTWATCH_DIRECTORY, fileName);
 }
 
@@ -42,11 +47,19 @@ export async function writeDriftwatchJson(
   fileName: DriftwatchFileName,
   value: unknown,
 ): Promise<void> {
+  await writeDriftwatchText(root, fileName, formatJson(value));
+}
+
+export async function writeDriftwatchText(
+  root: string,
+  fileName: DriftwatchFileName | DriftwatchTextFileName,
+  content: string,
+): Promise<void> {
   const destination = driftwatchPath(root, fileName);
   const temporaryPath = `${destination}.${randomUUID()}.tmp`;
 
   try {
-    await writeFile(temporaryPath, formatJson(value), { flag: "wx" });
+    await writeFile(temporaryPath, content, { flag: "wx" });
     await rename(temporaryPath, destination);
   } catch (error) {
     throw new OperationalError(`could not write ${fileName}`, { cause: error });
