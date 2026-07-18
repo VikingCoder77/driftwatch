@@ -34,7 +34,7 @@ The working tree was clean after `81c5f23`.
 ## Validation
 
 - `npm --script-shell=/bin/sh run lint`
-- `npm --script-shell=/bin/sh test` — 34 tests across 13 files
+- `npm --script-shell=/bin/sh test` — 35 tests across 13 files
 - `npm --script-shell=/bin/sh run build`
 - CLI help smoke checks for all commands
 - `git diff --check`
@@ -78,6 +78,8 @@ The explicit script shell is needed because the managed environment's reduced `P
 - Self-audit exposed a false violation cited only from `README.md`, despite the prompt disallowing documentation as implementation evidence. Commit `96b97a2` deterministically downgrades documentation-only `SATISFIED` and `VIOLATED` results to `NOT_FOUND`.
 - Commit `aa81105` aligned G2 with R6 so the incremental-check goal explicitly includes retrying unmapped claims against changed files.
 - The no-build judge install goal remains release-dependent until the package is published; it should be `NOT_FOUND`, not `VIOLATED`, before publication.
+- A live incremental benchmark used exactly 10 changed files and six affected mapped claims. `check` completed in 36.33 seconds, exited 0, and the wrapper counted exactly six real Codex subprocesses, satisfying G2 and M3.
+- `test/check.test.ts` now preserves the 10-file/six-call scenario as deterministic regression coverage.
 
 ## Resume Instructions
 

@@ -241,4 +241,111 @@ describe("checkCommand", () => {
       checkedAtCommit: head,
     });
   });
+
+  it("limits a ten-file incremental diff to six backend calls", async () => {
+    const repository = await createRepository();
+    const identifiers = [
+      "alphaLimit",
+      "bravoLimit",
+      "charlieLimit",
+      "deltaLimit",
+      "echoLimit",
+      "foxtrotLimit",
+    ];
+    const claims = identifiers.map((identifier, index) => ({
+      id: `C${index + 1}`,
+      section: "Limits",
+      text: `The ${identifier} constant is 10.`,
+      type: "limit",
+    }));
+
+    for (let index = 0; index < 10; index += 1) {
+      const identifier = identifiers[index] ?? `supportValue${index + 1}`;
+      await writeFile(
+        join(repository, `file${String(index + 1).padStart(2, "0")}.ts`),
+        `export const ${identifier} = 10;\n`,
+      );
+    }
+    await writeState(repository, "claims.json", claims);
+    await writeState(
+      repository,
+      "mapping.json",
+      Object.fromEntries(
+        claims.map((claim, index) => [
+          claim.id,
+          {
+            status: "SATISFIED",
+            file: `file${String(index + 1).padStart(2, "0")}.ts`,
+            lines: "1-1",
+            evidence: "The constant is 10.",
+            checkedAtCommit: "seed",
+          },
+        ]),
+      ),
+    );
+    const base = await commit(repository, "base");
+
+    for (let index = 0; index < 10; index += 1) {
+      const fileName = `file${String(index + 1).padStart(2, "0")}.ts`;
+      const identifier = identifiers[index] ?? `supportValue${index + 1}`;
+      await writeFile(
+        join(repository, fileName),
+        `export const ${identifier} = 10;\nexport const revision${index + 1} = 2;\n`,
+      );
+    }
+    await git(repository, ["add", "*.ts"]);
+    await git(repository, [
+      "-c",
+      "user.name=Driftwatch Tests",
+      "-c",
+      "user.email=tests@driftwatch.local",
+      "commit",
+      "--quiet",
+      "-m",
+      "change ten files",
+    ]);
+    const head = await git(repository, ["rev-parse", "HEAD"]);
+    await writeState(repository, "state.json", { lastCheckedCommit: base });
+    await writeState(
+      repository,
+      "mapping.json",
+      Object.fromEntries(
+        claims.map((claim, index) => [
+          claim.id,
+          {
+            status: "SATISFIED",
+            file: `file${String(index + 1).padStart(2, "0")}.ts`,
+            lines: "1-1",
+            evidence: "The constant is 10.",
+            checkedAtCommit: base,
+          },
+        ]),
+      ),
+    );
+    const backend = new SequenceBackend(
+      claims.map((claim, index) =>
+        JSON.stringify({
+          status: "SATISFIED",
+          file: `file${String(index + 1).padStart(2, "0")}.ts`,
+          lines: "1-1",
+          evidence: `${claim.text} is implemented directly.`,
+        }),
+      ),
+    );
+
+    const changedFiles = (
+      await git(repository, ["diff", "--name-only", `${base}..${head}`])
+    ).split("\n");
+    const summary = await checkCommand(repository, {
+      createBackend: () => backend,
+    });
+
+    expect(changedFiles).toHaveLength(10);
+    expect(summary).toEqual({
+      checkedClaimCount: 6,
+      commit: head,
+      hasViolations: false,
+    });
+    expect(backend.prompts).toHaveLength(6);
+  });
 });
