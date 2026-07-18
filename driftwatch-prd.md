@@ -107,7 +107,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 ## 6. Packaging & Judge Experience
 
 - R41: Driftwatch is runnable via `npx driftwatch` without a global install.
-- R42: The repository includes a `demo/` directory containing a small sample service, its PRD, and pre-seeded drift, such that `driftwatch ingest demo/PRD.md && driftwatch report` (run inside `demo/`) surfaces at least 3 genuine violations.
+- R42: The repository includes a `demo/` directory containing a small sample service, its PRD, and pre-seeded drift, such that `driftwatch ingest demo/PRD.md && driftwatch report`, run from the repository root, surfaces at least 3 genuine violations.
 - R43: The README leads with a two-sentence problem statement, an animated GIF of a drift report, install instructions, and a "test in 2 commands" section for judges.
 - R44: The README documents where Codex and GPT-5.6 were used during development, including the primary Codex session, per challenge submission requirements.
 

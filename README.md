@@ -22,7 +22,7 @@ codex --version
 
 ## Install
 
-Run the published CLI without a global installation:
+After npm publication, run the CLI without a global installation:
 
 ```sh
 npx driftwatch --help
@@ -46,11 +46,11 @@ npm test
 
 ## Test in 2 Commands
 
-The bundled fixture contains three genuine violations and three satisfied controls:
+From a fresh repository checkout, install dependencies and run the bundled fixture without a build step:
 
 ```sh
-npm run dev -- ingest demo/PRD.md
-npm run dev -- report
+npm install
+npm run dev -- ingest demo/PRD.md && npm run dev -- report
 ```
 
 The expected summary is `3 violated · 0 unimplemented · 3 satisfied`. `report` exits with code `1` because the violations are intentional, and it stores the same output at `.driftwatch/DRIFT.md`.
