@@ -16,7 +16,7 @@ AI coding agents write code faster than humans can verify it against intent. A d
 ## 2. Goals
 
 - G1: A developer can go from `driftwatch init` to a full drift report on a real repo in under 15 minutes.
-- G2: Incremental checks after a coding session complete in under 90 seconds for a typical diff (≤15 changed files), by re-verifying only claims mapped to changed files.
+- G2: Incremental checks after a coding session complete in under 90 seconds for a typical diff (≤15 changed files), by re-verifying claims mapped to changed files and retrying unmapped claims only against that diff.
 - G3: A violated claim is reported with enough evidence (claim text, file path, line range, one-sentence rationale) that the developer's next agent prompt can simply be "fix claim N".
 - G4: Judges can install and run driftwatch against the bundled demo repository without building from source.
 
