@@ -65,6 +65,8 @@ The explicit script shell is needed because the managed environment's reduced `P
 - The final report contains exactly 3 `VIOLATED`, 0 `NOT_FOUND`, and 3 `SATISFIED` results.
 - Every violated result cites the direct contradictory constant in `demo/src/service.ts`; no false violations were observed.
 - `report` exits with code 1 as required and writes identical content to `.driftwatch/DRIFT.md`.
+- A live first-run `check` reverified all 6 claims at commit `26a063b` and exited with code 1 because the three intentional violations remain.
+- An immediate second `check` at the same HEAD verified 0 claims, preserved the stored mapping, and still exited with code 1.
 
 ## Resume Instructions
 

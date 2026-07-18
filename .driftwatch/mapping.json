@@ -4,41 +4,41 @@
     "file": "demo/src/service.ts",
     "lines": "1-4",
     "evidence": "HEALTH_RESPONSE is implemented with statusCode 200 and body status exactly \"ok\".",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   },
   "C2": {
     "status": "SATISFIED",
     "file": "demo/src/service.ts",
     "lines": "6-6",
-    "evidence": "The implementation exports CREATE_SESSION_MISSING_USER_ID_STATUS with the exact value 400.",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "evidence": "The implementation exports CREATE_SESSION_MISSING_USER_ID_STATUS with the exact numeric value 400.",
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   },
   "C3": {
     "status": "VIOLATED",
     "file": "demo/src/service.ts",
     "lines": "8-8",
     "evidence": "The implementation sets SESSION_TTL_MINUTES to 60, directly contradicting the required value of 30.",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   },
   "C4": {
     "status": "VIOLATED",
     "file": "demo/src/service.ts",
     "lines": "10-10",
-    "evidence": "The implementation sets RATE_LIMIT_REQUESTS_PER_MINUTE to 1,000, directly contradicting the claimed value of 100.",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "evidence": "The implementation sets RATE_LIMIT_REQUESTS_PER_MINUTE to 1,000, directly contradicting the required value of 100.",
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   },
   "C5": {
     "status": "VIOLATED",
     "file": "demo/src/service.ts",
     "lines": "12-12",
-    "evidence": "LOGIN_AUDIT_FIELDS contains only \"userId\", directly omitting the required \"timestamp\" field.",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "evidence": "LOGIN_AUDIT_FIELDS is implemented as [\"userId\"], directly omitting the required \"timestamp\" field.",
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   },
   "C6": {
     "status": "SATISFIED",
     "file": "demo/src/service.ts",
     "lines": "14-14",
-    "evidence": "The implementation directly defines ADMIN_AUTH_HEADER as exactly \"x-admin-key\".",
-    "checkedAtCommit": "5e0b668457300aa942c805c69e568895ce8684ed"
+    "evidence": "The implementation directly exports ADMIN_AUTH_HEADER with the exact value \"x-admin-key\".",
+    "checkedAtCommit": "26a063bcf93536a113ebc8fee862e8724fd62b0b"
   }
 }
