@@ -23,6 +23,16 @@ function matchEvent(path: string, count: number): string {
   });
 }
 
+function weightedMatchEvent(path: string, matches: string[]): string {
+  return JSON.stringify({
+    type: "match",
+    data: {
+      path: { text: path },
+      submatches: matches.map((text) => ({ match: { text } })),
+    },
+  });
+}
+
 describe("extractSearchTerms", () => {
   it("keeps quoted strings, identifiers, and numbers while removing stopwords", () => {
     expect(extractSearchTerms(claim.text)).toEqual([
@@ -72,5 +82,29 @@ describe("findCandidates", () => {
     await expect(findCandidates("/repo", claim, { runner })).resolves.toEqual(
       [],
     );
+  });
+
+  it("ranks exact identifiers above repeated generic words", async () => {
+    const runner = vi.fn<SearchRunner>().mockResolvedValue({
+      stdout: [
+        weightedMatchEvent("docs/noisy.md", [
+          "file",
+          "file",
+          "stores",
+          "stores",
+        ]),
+        weightedMatchEvent("src/config.ts", ["lastCheckedCommit"]),
+      ].join("\n"),
+      stderr: "",
+      exitCode: 0,
+    });
+
+    const candidates = await findCandidates("/repo", claim, { runner });
+
+    expect(candidates[0]).toEqual({
+      path: "src/config.ts",
+      matchCount: 1_000,
+    });
+    expect(candidates[1]).toEqual({ path: "docs/noisy.md", matchCount: 4 });
   });
 });

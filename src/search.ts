@@ -72,6 +72,11 @@ export interface CandidateSearchOptions {
   runner?: SearchRunner;
 }
 
+interface WeightedSearchTerm {
+  value: string;
+  weight: number;
+}
+
 export const runRipgrep: SearchRunner = (args, cwd) =>
   new Promise((resolve, reject) => {
     const child = spawn("rg", args, {
@@ -95,34 +100,69 @@ export const runRipgrep: SearchRunner = (args, cwd) =>
     });
   });
 
-function addTerm(terms: string[], seen: Set<string>, value: string): void {
+function addTerm(
+  terms: WeightedSearchTerm[],
+  indexes: Map<string, number>,
+  value: string,
+  weight: number,
+): void {
   const term = value.trim().replace(/^[._-]+|[._-]+$/g, "");
   const key = term.toLowerCase();
   const isNumber = /^\d/.test(term);
-  if ((!isNumber && term.length < 2) || STOPWORDS.has(key) || seen.has(key)) {
+  if ((!isNumber && term.length < 2) || STOPWORDS.has(key)) {
     return;
   }
-  terms.push(term);
-  seen.add(key);
+  const existingIndex = indexes.get(key);
+  if (existingIndex !== undefined) {
+    const existingTerm = terms[existingIndex];
+    if (existingTerm !== undefined) {
+      existingTerm.weight = Math.max(existingTerm.weight, weight);
+    }
+    return;
+  }
+  indexes.set(key, terms.length);
+  terms.push({ value: term, weight });
 }
 
-export function extractSearchTerms(claimText: string): string[] {
-  const terms: string[] = [];
-  const seen = new Set<string>();
+function tokenWeight(token: string): number {
+  if (/^\d/.test(token)) {
+    return 20;
+  }
+  if (
+    token.includes("_") ||
+    token.includes(".") ||
+    token.includes("-") ||
+    /[a-z][A-Z]/.test(token)
+  ) {
+    return 1_000;
+  }
+  if (/^[A-Z]/.test(token)) {
+    return 5;
+  }
+  return 1;
+}
+
+function extractWeightedSearchTerms(claimText: string): WeightedSearchTerm[] {
+  const terms: WeightedSearchTerm[] = [];
+  const indexes = new Map<string, number>();
   const quotedPattern = /(["'`])([^"'`]+)\1/g;
 
   for (const match of claimText.matchAll(quotedPattern)) {
     if (match[2] !== undefined) {
-      addTerm(terms, seen, match[2]);
+      addTerm(terms, indexes, match[2], 20);
     }
   }
 
   const tokenPattern = /\b[A-Za-z][A-Za-z0-9_.-]*\b|\b\d+(?:\.\d+)?\b/g;
   for (const match of claimText.matchAll(tokenPattern)) {
-    addTerm(terms, seen, match[0]);
+    addTerm(terms, indexes, match[0], tokenWeight(match[0]));
   }
 
   return terms;
+}
+
+export function extractSearchTerms(claimText: string): string[] {
+  return extractWeightedSearchTerms(claimText).map((term) => term.value);
 }
 
 function isSearchablePath(path: string): boolean {
@@ -138,7 +178,10 @@ function isSearchablePath(path: string): boolean {
   );
 }
 
-function parseMatchCounts(output: string): Map<string, number> {
+function parseMatchCounts(
+  output: string,
+  termWeights: Map<string, number>,
+): Map<string, number> {
   const counts = new Map<string, number>();
 
   for (const line of output.split("\n")) {
@@ -167,13 +210,17 @@ function parseMatchCounts(output: string): Map<string, number> {
 
     const data = event.data as {
       path?: { text?: string };
-      submatches?: unknown[];
+      submatches?: Array<{ match?: { text?: string } }>;
     };
     const path = data.path?.text?.replace(/^\.\//, "");
     if (path === undefined) {
       continue;
     }
-    const matchCount = data.submatches?.length ?? 1;
+    const matchCount =
+      data.submatches?.reduce((total, submatch) => {
+        const matchedText = submatch.match?.text?.toLowerCase();
+        return total + (matchedText ? (termWeights.get(matchedText) ?? 1) : 1);
+      }, 0) ?? 1;
     counts.set(path, (counts.get(path) ?? 0) + matchCount);
   }
 
@@ -185,7 +232,8 @@ export async function findCandidates(
   claim: Claim,
   options: CandidateSearchOptions = {},
 ): Promise<CandidateFile[]> {
-  const terms = extractSearchTerms(claim.text);
+  const weightedTerms = extractWeightedSearchTerms(claim.text);
+  const terms = weightedTerms.map((term) => term.value);
   const paths = options.paths?.filter(isSearchablePath);
   if (terms.length === 0 || paths?.length === 0) {
     return [];
@@ -194,6 +242,7 @@ export async function findCandidates(
   const args = [
     "--json",
     "--ignore-case",
+    "--fixed-strings",
     "--no-messages",
     "--hidden",
     "--glob",
@@ -233,7 +282,10 @@ export async function findCandidates(
     );
   }
 
-  return [...parseMatchCounts(result.stdout).entries()]
+  const termWeights = new Map(
+    weightedTerms.map((term) => [term.value.toLowerCase(), term.weight]),
+  );
+  return [...parseMatchCounts(result.stdout, termWeights).entries()]
     .map(([path, matchCount]) => ({ path, matchCount }))
     .sort(
       (left, right) =>
