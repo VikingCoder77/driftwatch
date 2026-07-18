@@ -34,7 +34,7 @@ The working tree was clean after `81c5f23`.
 ## Validation
 
 - `npm --script-shell=/bin/sh run lint`
-- `npm --script-shell=/bin/sh test` — 35 tests across 13 files
+- `npm --script-shell=/bin/sh test` — 36 tests across 13 files
 - `npm --script-shell=/bin/sh run build`
 - CLI help smoke checks for all commands
 - `git diff --check`
@@ -80,6 +80,14 @@ The explicit script shell is needed because the managed environment's reduced `P
 - The no-build judge install goal remains release-dependent until the package is published; it should be `NOT_FOUND`, not `VIOLATED`, before publication.
 - A live incremental benchmark used exactly 10 changed files and six affected mapped claims. `check` completed in 36.33 seconds, exited 0, and the wrapper counted exactly six real Codex subprocesses, satisfying G2 and M3.
 - `test/check.test.ts` now preserves the 10-file/six-call scenario as deterministic regression coverage.
+
+## Fresh-Checkout Judge Flow
+
+- Commander was pinned to the Node 20-compatible v14 line after a clean install revealed that Commander 15 requires Node 22.12 despite the package claiming Node 20 support.
+- R42 and the README now consistently run the demo from the repository root. The documented two commands are `npm install` followed by the chained source-mode ingest and report, with no build step.
+- A clean clone at `1c8d9ee` installed without engine or vulnerability warnings and completed the exact two-command demo flow in 26 seconds.
+- Live extraction returned the intended six claims; the report showed exactly 3 `VIOLATED`, 0 `NOT_FOUND`, and 3 `SATISFIED`, exited 1 intentionally, and displayed the current ingest commit.
+- Candidate ranking now keeps implementation-capable paths ahead of tests and documentation so repeated fixture assertions cannot crowd direct source evidence out of the three-file limit.
 
 ## Resume Instructions
 
