@@ -2,7 +2,9 @@
 
 Driftwatch detects when implementation quietly diverges from a product requirements document. It turns testable PRD assertions into tracked claims and reports violations with file-and-line evidence.
 
-> **Status:** The four-command v1 flow is implemented. Demo packaging and prompt tuning remain before the hackathon build is complete.
+![Animated Driftwatch report showing three seeded violations](assets/driftwatch-demo.gif)
+
+> **Status:** The four-command v1 flow and live-validated demo are implemented. npm publication and final challenge submission assets remain.
 
 ## Requirements
 
