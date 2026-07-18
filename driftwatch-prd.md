@@ -61,7 +61,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 
 ### 5.3 Claim Extraction
 
-- R14: Claim extraction sends the full PRD text to the model in a single prompt whose instructions require extracting every testable assertion and ignoring vision statements and market context.
+- R14: Claim extraction sends the full PRD text to the model in a single prompt whose instructions require extracting every testable assertion, ignoring vision statements and market context, and preserving each explicitly numbered source requirement as exactly one claim.
 - R15: Each extracted claim is stored with fields: `id` (string, stable within one ingest, format `C<number>`), `section` (the PRD heading it came from), `text` (the assertion, quoted or minimally normalized), and `type`.
 - R16: The `type` field is one of exactly: `behavior`, `data-model`, `api-contract`, `limit`, `config`, `cli`.
 - R17: The extraction prompt requires the model to respond with only a JSON array matching the claim schema, with no surrounding prose.

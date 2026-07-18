@@ -31,6 +31,9 @@ describe("extractClaims", () => {
 
     expect(claims[0]?.id).toBe("C1");
     expect(backend.prompts[0]).toContain("# PRD\nComplete source text");
+    expect(backend.prompts[0]).toContain(
+      "Do not split one numbered requirement into multiple claims.",
+    );
     expect(backend.prompts[0]).toMatch(
       /Do not include Markdown fences or prose\.$/,
     );
