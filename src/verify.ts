@@ -34,13 +34,15 @@ Claim ${claim.id}: ${claim.text}
 
 Use only direct evidence in the provided files. Mark SATISFIED only when implementation evidence clearly fulfills the claim. Mark VIOLATED only when implementation evidence directly contradicts the claim. Otherwise mark NOT_FOUND. A PRD, documentation restatement, or test expectation alone is not implementation evidence.
 
+${files}
+
 Respond with only one JSON object containing exactly:
 - status: SATISFIED, VIOLATED, or NOT_FOUND
 - file: one provided candidate path, or null
-- lines: a line range such as "88-95", or null
+- lines: a line range matching <start>-<end>, or null; for one line use the same number twice, such as "1-1", never "1"
 - evidence: one concise sentence
 
-${files}`;
+Return only the JSON object with no Markdown fences or prose.`;
 }
 
 export async function verifyClaim(
@@ -63,28 +65,42 @@ export async function verifyClaim(
     candidates,
     extractSearchTerms(claim.text),
   );
-  const output = await backend.run(buildVerificationPrompt(claim, contexts));
+  const verificationPrompt = buildVerificationPrompt(claim, contexts);
+  let prompt = verificationPrompt;
+  let result: VerificationResult | undefined;
 
-  let result: VerificationResult;
-  try {
-    result = parseModelOutput(output, VerificationResultSchema);
-  } catch (error) {
-    if (error instanceof ModelOutputError) {
-      throw new OperationalError(
-        `Codex returned invalid verification JSON for ${claim.id}`,
-        { cause: error },
-      );
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const output = await backend.run(prompt);
+    try {
+      const parsedResult = parseModelOutput(output, VerificationResultSchema);
+      if (
+        parsedResult.file !== null &&
+        !candidates.some((candidate) => candidate.path === parsedResult.file)
+      ) {
+        throw new ModelOutputError(
+          `response cited non-candidate file ${parsedResult.file}`,
+        );
+      }
+      result = parsedResult;
+      break;
+    } catch (error) {
+      if (!(error instanceof ModelOutputError)) {
+        throw error;
+      }
+      if (attempt === 1) {
+        throw new OperationalError(
+          `Inference harness returned invalid verification JSON for ${claim.id} after one retry`,
+          { cause: error },
+        );
+      }
+      prompt = `${verificationPrompt}
+
+Your previous response was invalid: ${error.message}. Correct it and return only the required JSON object. A single line must use a repeated range such as "1-1".`;
     }
-    throw error;
   }
 
-  if (
-    result.file !== null &&
-    !candidates.some((candidate) => candidate.path === result.file)
-  ) {
-    throw new OperationalError(
-      `Codex cited a file outside the candidates for ${claim.id}`,
-    );
+  if (result === undefined) {
+    throw new OperationalError(`verification failed for ${claim.id}`);
   }
 
   if (

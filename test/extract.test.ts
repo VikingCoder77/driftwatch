@@ -31,6 +31,9 @@ describe("extractClaims", () => {
 
     expect(claims[0]?.id).toBe("C1");
     expect(backend.prompts[0]).toContain("# PRD\nComplete source text");
+    expect(backend.prompts[0]).toMatch(
+      /Do not include Markdown fences or prose\.$/,
+    );
   });
 
   it("retries exactly once after malformed output", async () => {
@@ -44,9 +47,9 @@ describe("extractClaims", () => {
   it("fails operationally after the retry is invalid", async () => {
     const backend = new SequenceBackend(["invalid", "still invalid"]);
 
-    await expect(extractClaims("PRD", backend)).rejects.toBeInstanceOf(
-      OperationalError,
-    );
+    await expect(extractClaims("PRD", backend)).rejects.toMatchObject({
+      message: "Inference harness returned invalid claim JSON after one retry",
+    });
     expect(backend.prompts).toHaveLength(2);
   });
 

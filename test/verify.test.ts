@@ -19,6 +19,17 @@ class RecordingBackend implements Backend {
   }
 }
 
+class SequenceBackend implements Backend {
+  readonly prompts: string[] = [];
+
+  constructor(private readonly outputs: string[]) {}
+
+  async run(prompt: string): Promise<string> {
+    this.prompts.push(prompt);
+    return this.outputs.shift() ?? "";
+  }
+}
+
 const claim: Claim = {
   id: "C1",
   section: "Commands",
@@ -72,6 +83,42 @@ describe("verifyClaim", () => {
       ),
     ).resolves.toMatchObject({ status: "SATISFIED", file: "service.ts" });
     expect(backend.prompts[0]).toContain('1: export const reply = "pong";');
+    expect(backend.prompts[0]).toMatch(
+      /Return only the JSON object with no Markdown fences or prose\.$/,
+    );
+  });
+
+  it("retries a malformed line range exactly once", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "driftwatch-verify-"));
+    temporaryDirectories.push(directory);
+    await writeFile(
+      join(directory, "service.ts"),
+      'export const reply = "pong";\n',
+    );
+    const malformed = JSON.stringify({
+      status: "SATISFIED",
+      file: "service.ts",
+      lines: "1",
+      evidence: "The reply constant is pong.",
+    });
+    const valid = JSON.stringify({
+      status: "SATISFIED",
+      file: "service.ts",
+      lines: "1-1",
+      evidence: "The reply constant is pong.",
+    });
+    const backend = new SequenceBackend([malformed, valid]);
+
+    await expect(
+      verifyClaim(
+        directory,
+        claim,
+        [{ path: "service.ts", matchCount: 1 }],
+        backend,
+      ),
+    ).resolves.toMatchObject({ status: "SATISFIED", lines: "1-1" });
+    expect(backend.prompts).toHaveLength(2);
+    expect(backend.prompts[1]).toContain("previous response was invalid");
   });
 
   it("rejects evidence that cites a non-candidate file", async () => {

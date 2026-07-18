@@ -77,7 +77,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 ### 5.5 Verification
 
 - R23: Verification sends one prompt per claim containing the claim text and the contents (or relevant chunks) of its candidate files.
-- R24: The verification prompt requires a JSON object with fields: `status` (one of `SATISFIED`, `VIOLATED`, `NOT_FOUND`), `file` (path or null), `lines` (string range like "88-95" or null), and `evidence` (one sentence).
+- R24: The verification prompt requires a JSON object with fields: `status` (one of `SATISFIED`, `VIOLATED`, `NOT_FOUND`), `file` (path or null), `lines` (string range like "88-95" or null), and `evidence` (one sentence). Invalid verification output is retried exactly once with a corrective prompt; a second invalid response exits with code 2.
 - R25: A file larger than 24,000 characters is chunked, and only chunks containing at least one search-term hit (plus 40 lines of surrounding context) are included in the prompt.
 - R26: Verification results are written to `.driftwatch/mapping.json` keyed by claim id, each entry also storing `checkedAtCommit`.
 
