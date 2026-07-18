@@ -34,7 +34,7 @@ The working tree was clean after `81c5f23`.
 ## Validation
 
 - `npm --script-shell=/bin/sh run lint`
-- `npm --script-shell=/bin/sh test` — 36 tests across 13 files
+- `npm --script-shell=/bin/sh test` — 55 tests across 14 files
 - `npm --script-shell=/bin/sh run build`
 - CLI help smoke checks for all commands
 - `git diff --check`
@@ -88,6 +88,15 @@ The explicit script shell is needed because the managed environment's reduced `P
 - A clean clone at `1c8d9ee` installed without engine or vulnerability warnings and completed the exact two-command demo flow in 26 seconds.
 - Live extraction returned the intended six claims; the report showed exactly 3 `VIOLATED`, 0 `NOT_FOUND`, and 3 `SATISFIED`, exited 1 intentionally, and displayed the current ingest commit.
 - Candidate ranking now keeps implementation-capable paths ahead of tests and documentation so repeated fixture assertions cannot crowd direct source evidence out of the three-file limit.
+
+## Multi-Harness Expansion
+
+- Driftwatch now supports `codex`, `opencode`, `claude-code`, and `antigravity` through one backend factory. `init --backend <name> [--model <model>]` writes the selected adapter; a null model uses the harness default.
+- Codex runs in its read-only sandbox, OpenCode runs with all tool permissions denied, Claude Code runs statelessly with built-in and MCP tools disabled, and Antigravity receives an explicit no-tools/no-writes instruction.
+- Official non-interactive contracts were verified as `codex exec`, `opencode run`, `claude -p`, and `agy -p`. Missing selected executables produce named, actionable exit-2 errors.
+- OpenCode 1.14.50 and Antigravity 1.0.13 passed both adapter JSON round trips and full authenticated demo ingests. Each produced exactly 3 `VIOLATED`, 0 `NOT_FOUND`, and 3 `SATISFIED` results with direct source evidence.
+- Codex 0.145.0-alpha.18 passed the same full demo after the shared prompt changes. Claude Code 2.1.214 was installed temporarily, and all configured flags matched its real help output, but `claude auth status` reported `loggedIn: false`, so its authenticated model call remains pending.
+- Verification now retries one malformed harness response with a corrective prompt. Explicitly numbered requirements are preserved as one claim, stabilizing the six-claim demo across harnesses.
 
 ## Resume Instructions
 

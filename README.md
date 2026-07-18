@@ -24,6 +24,8 @@ Supported harnesses:
 
 Omit `--model` to use the selected harness's configured default. The shipped default remains Codex with `gpt-5.6-sol`.
 
+Release validation covers the full demo with Codex, OpenCode 1.14.50, and Antigravity 1.0.13; each produced the expected `3 violated · 0 unimplemented · 3 satisfied` report. Claude Code 2.1.214 accepts the configured non-interactive flags, but an authenticated Claude smoke remains pending.
+
 The ChatGPT desktop app bundles Codex on macOS. If `codex --version` is not found, expose that binary for the current shell:
 
 ```sh
