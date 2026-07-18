@@ -34,7 +34,7 @@ The working tree was clean after `81c5f23`.
 ## Validation
 
 - `npm --script-shell=/bin/sh run lint`
-- `npm --script-shell=/bin/sh test` — 27 tests across 11 files
+- `npm --script-shell=/bin/sh test` — 34 tests across 13 files
 - `npm --script-shell=/bin/sh run build`
 - CLI help smoke checks for all commands
 - `git diff --check`
@@ -69,6 +69,15 @@ The explicit script shell is needed because the managed environment's reduced `P
 - An immediate second `check` at the same HEAD verified 0 claims, preserved the stored mapping, and still exited with code 1.
 - `npm pack` produced a 21.2 kB package, a clean temporary install linked `node_modules/.bin/driftwatch` to `dist/cli.js`, and the installed CLI help smoke test passed.
 - `scripts/render-demo-gif.sh` reproducibly generates the 1200×720, 7-second animated terminal report at `assets/driftwatch-demo.gif`; representative and final frames passed visual inspection.
+
+## Full Self-Audit
+
+- A clean-clone baseline ingest of `driftwatch-prd.md` at `34f0ee9` extracted 103 non-duplicate claims in 930.78 seconds; the serial verifier missed M2's 10-minute limit.
+- Commit `123fc7b` added bounded four-worker verification while preserving claim-order output and stopping new scheduling after a failure.
+- A second clean-clone ingest at `123fc7b` extracted 65 claims in 274.82 seconds. Its extraction represented every numbered requirement from R1 through R44 and exceeded M2's 35-claim floor.
+- Self-audit exposed a false violation cited only from `README.md`, despite the prompt disallowing documentation as implementation evidence. Commit `96b97a2` deterministically downgrades documentation-only `SATISFIED` and `VIOLATED` results to `NOT_FOUND`.
+- Commit `aa81105` aligned G2 with R6 so the incremental-check goal explicitly includes retrying unmapped claims against changed files.
+- The no-build judge install goal remains release-dependent until the package is published; it should be `NOT_FOUND`, not `VIOLATED`, before publication.
 
 ## Resume Instructions
 
