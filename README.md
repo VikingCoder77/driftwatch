@@ -2,7 +2,7 @@
 
 Driftwatch detects when implementation quietly diverges from a product requirements document. It turns testable PRD assertions into tracked claims and reports violations with file-and-line evidence.
 
-> **Status:** Foundation build. `init`, schemas, claim extraction, and the Codex backend are implemented; end-to-end `ingest`, `check`, and `report` are next.
+> **Status:** Active v1 build. `init` and end-to-end `ingest` are implemented; incremental `check` and report rendering are next.
 
 ## Requirements
 
@@ -23,9 +23,10 @@ Run the CLI from source:
 
 ```sh
 npm run dev -- init
+npm run dev -- ingest driftwatch-prd.md
 ```
 
-This creates `.driftwatch/config.json` and `.driftwatch/state.json` at the Git repository root. The generated JSON is human-readable and is intended to be committed.
+`init` creates `.driftwatch/config.json` and `.driftwatch/state.json` at the Git repository root. `ingest` extracts claims, ranks up to three candidate files per claim with ripgrep, verifies them through the local Codex CLI, and writes `claims.json` plus `mapping.json`. Generated JSON is human-readable and intended to be committed.
 
 ## Commands
 

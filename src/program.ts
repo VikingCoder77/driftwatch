@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
 import { OperationalError } from "./errors.js";
 
@@ -25,7 +26,12 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("ingest <prd>")
     .description("Extract and verify claims from a PRD")
-    .action(() => unavailable("ingest"));
+    .action(async (prd: string) => {
+      const summary = await ingestCommand(cwd, prd);
+      process.stdout.write(
+        `Ingested ${summary.claimCount} claims at ${summary.commit}\n`,
+      );
+    });
 
   program
     .command("check")

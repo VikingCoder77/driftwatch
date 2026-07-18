@@ -19,3 +19,18 @@ export async function findGitRoot(cwd: string): Promise<string> {
     );
   }
 }
+
+export async function getCurrentCommit(root: string): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    return stdout.trim();
+  } catch (error) {
+    throw new OperationalError(
+      "could not read HEAD; create an initial Git commit and try again",
+      { cause: error },
+    );
+  }
+}
