@@ -44,11 +44,9 @@ The explicit script shell is needed because the managed environment's reduced `P
 
 ## Immediate Next Steps
 
-1. Resolve the shipped model slug: the PRD and `init` currently use `gpt-5.6`, while the live ChatGPT Codex catalog requires an explicit variant such as `gpt-5.6-sol`.
-2. Decide whether to repair the broken Homebrew `codex` symlink or document adding the ChatGPT resource directory to `PATH`.
-3. Add the required `demo/` service, demo PRD, and at least three genuine seeded violations.
-4. Run `ingest` and `report` against the demo, tune prompts, and ensure zero false `VIOLATED` results.
-5. Improve README packaging instructions and add the required judge-focused demo assets.
+1. Add the required `demo/` service, demo PRD, and at least three genuine seeded violations.
+2. Run `ingest` and `report` against the demo, tune prompts, and ensure zero false `VIOLATED` results.
+3. Improve README packaging instructions and add the required judge-focused demo assets.
 
 ## Live Codex Validation
 

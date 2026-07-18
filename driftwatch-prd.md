@@ -88,7 +88,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 - R29: Driftwatch extracts the first syntactically valid JSON value (fenced or raw) from the backend's stdout before schema validation, discarding any surrounding text.
 - R30: Every inference prompt ends with an instruction to respond with only JSON matching the given schema.
 - R31: If the `codex` executable is not found on PATH, driftwatch exits with code 2 and a message telling the user to install the Codex CLI.
-- R32: The model to use is read from `config.json` key `model`; the backend passes it to the Codex CLI. The shipped default is GPT‑5.6.
+- R32: The model to use is read from `config.json` key `model`; the backend passes it to the Codex CLI. The shipped default is GPT‑5.6 Sol (`gpt-5.6-sol`).
 
 ### 5.7 Report Output
 

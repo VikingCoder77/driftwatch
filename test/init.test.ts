@@ -51,7 +51,7 @@ describe("initCommand", () => {
     );
     expect(config).toEqual({
       backend: "codex",
-      model: "gpt-5.6",
+      model: "gpt-5.6-sol",
       prdPath: null,
     });
     expect(state).toEqual({});

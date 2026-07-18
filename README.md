@@ -9,7 +9,14 @@ Driftwatch detects when implementation quietly diverges from a product requireme
 - Node.js 20 or newer
 - Git
 - `rg` (ripgrep)
-- An installed and authenticated Codex CLI
+- An installed and authenticated Codex CLI available as `codex` on `PATH`
+
+The ChatGPT desktop app bundles Codex on macOS. If `codex --version` is not found, expose that binary for the current shell:
+
+```sh
+export PATH="/Applications/ChatGPT.app/Contents/Resources:$PATH"
+codex --version
+```
 
 ## Development
 

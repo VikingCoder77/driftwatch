@@ -8,7 +8,7 @@ describe("CodexBackend", () => {
       stdout: '{"ok":true}',
       stderr: "",
     });
-    const backend = new CodexBackend("gpt-5.6", "/repo", "codex", runner);
+    const backend = new CodexBackend("gpt-5.6-sol", "/repo", "codex", runner);
 
     await expect(backend.run("Return JSON")).resolves.toBe('{"ok":true}');
     expect(runner).toHaveBeenCalledWith(
@@ -17,7 +17,7 @@ describe("CodexBackend", () => {
         "exec",
         "--ephemeral",
         "--model",
-        "gpt-5.6",
+        "gpt-5.6-sol",
         "--sandbox",
         "read-only",
         "--color",
@@ -33,7 +33,7 @@ describe("CodexBackend", () => {
       code: "ENOENT",
     });
     const runner = vi.fn<ProcessRunner>().mockRejectedValue(missingError);
-    const backend = new CodexBackend("gpt-5.6", "/repo", "codex", runner);
+    const backend = new CodexBackend("gpt-5.6-sol", "/repo", "codex", runner);
 
     await expect(backend.run("prompt")).rejects.toMatchObject({
       name: "OperationalError",

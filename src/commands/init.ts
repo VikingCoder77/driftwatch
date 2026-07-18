@@ -5,7 +5,7 @@ import { findGitRoot } from "../git.js";
 import { formatJson } from "../json.js";
 import type { Config, State } from "../schemas.js";
 
-const DEFAULT_MODEL = "gpt-5.6";
+const DEFAULT_MODEL = "gpt-5.6-sol";
 
 export async function initCommand(cwd: string): Promise<string> {
   const root = await findGitRoot(cwd);
