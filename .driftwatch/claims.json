@@ -1,0 +1,38 @@
+[
+  {
+    "id": "C1",
+    "section": "Health",
+    "text": "`HEALTH_RESPONSE` has status code `200` and a JSON body whose `status` is exactly `\"ok\"`.",
+    "type": "api-contract"
+  },
+  {
+    "id": "C2",
+    "section": "Sessions",
+    "text": "`CREATE_SESSION_MISSING_USER_ID_STATUS` is exactly `400`.",
+    "type": "api-contract"
+  },
+  {
+    "id": "C3",
+    "section": "Sessions",
+    "text": "`SESSION_TTL_MINUTES` is exactly `30`.",
+    "type": "limit"
+  },
+  {
+    "id": "C4",
+    "section": "Rate Limiting",
+    "text": "`RATE_LIMIT_REQUESTS_PER_MINUTE` is exactly `100` requests per client.",
+    "type": "limit"
+  },
+  {
+    "id": "C5",
+    "section": "Audit Logging",
+    "text": "`LOGIN_AUDIT_FIELDS` contains both `\"userId\"` and `\"timestamp\"`.",
+    "type": "data-model"
+  },
+  {
+    "id": "C6",
+    "section": "Administration",
+    "text": "`ADMIN_AUTH_HEADER` is exactly `\"x-admin-key\"`.",
+    "type": "api-contract"
+  }
+]

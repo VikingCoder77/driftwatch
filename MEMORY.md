@@ -44,9 +44,9 @@ The explicit script shell is needed because the managed environment's reduced `P
 
 ## Immediate Next Steps
 
-1. Add the required `demo/` service, demo PRD, and at least three genuine seeded violations.
-2. Run `ingest` and `report` against the demo, tune prompts, and ensure zero false `VIOLATED` results.
-3. Improve README packaging instructions and add the required judge-focused demo assets.
+1. Improve README packaging and installation instructions for judge use.
+2. Add the required animated report asset or another polished terminal-demo capture.
+3. Dogfood incremental `check` against a committed demo change.
 
 ## Live Codex Validation
 
@@ -56,6 +56,15 @@ The explicit script shell is needed because the managed environment's reduced `P
 - The refreshed local catalog lists `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna`; a direct `gpt-5.6-sol` probe completed successfully.
 - A real Driftwatch smoke test completed in `/tmp/driftwatch-live.pRxcW1` after setting the fixture config model to `gpt-5.6-sol` and placing the ChatGPT resource directory on `PATH`.
 - Live extraction produced one valid claim, verification mapped it to `service.ts:1-3` as `SATISFIED`, `.driftwatch/DRIFT.md` was written, and `report` exited with code 0.
+
+## Live Demo Validation
+
+- The committed demo source defines three satisfied controls and three intentional contradictions.
+- Candidate-ranking tuning ensures `demo/src/service.ts` appears within the three-file limit for every extracted demo claim.
+- Live `ingest demo/PRD.md` with `gpt-5.6-sol` extracted the intended six claims.
+- The final report contains exactly 3 `VIOLATED`, 0 `NOT_FOUND`, and 3 `SATISFIED` results.
+- Every violated result cites the direct contradictory constant in `demo/src/service.ts`; no false violations were observed.
+- `report` exits with code 1 as required and writes identical content to `.driftwatch/DRIFT.md`.
 
 ## Resume Instructions
 

@@ -35,7 +35,7 @@ npm run dev -- ingest demo/PRD.md
 npm run dev -- report
 ```
 
-The report is also stored at `.driftwatch/DRIFT.md` for review or commit.
+The expected summary is `3 violated · 0 unimplemented · 3 satisfied`. `report` exits with code `1` because the violations are intentional, and it stores the same output at `.driftwatch/DRIFT.md`.
 
 Run the CLI from source:
 

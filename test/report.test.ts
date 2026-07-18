@@ -39,7 +39,7 @@ describe("reportCommand", () => {
       {
         id: "C1",
         section: "Satisfied",
-        text: `A satisfied requirement ${"with enough detail ".repeat(8)}`,
+        text: `A satisfied \`requirement\` ${"with enough detail ".repeat(8)}`,
         type: "behavior",
       },
       {
@@ -88,6 +88,7 @@ describe("reportCommand", () => {
     );
     expect(report.content).toContain("The limit is 3 \\| exactly.");
     expect(report.content).toContain("…");
+    expect(report.content).not.toContain("`requirement`");
     expect(report.content.indexOf("## Violated")).toBeLessThan(
       report.content.indexOf("## Unimplemented"),
     );

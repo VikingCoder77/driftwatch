@@ -115,7 +115,7 @@ export function renderDriftReport(
       ["Claim", "Requirement", "Location"],
       satisfied.map(({ claim, entry }) => [
         escapeCell(claim.id),
-        escapeCell(truncate(claim.text)),
+        escapeCell(truncate(claim.text.replaceAll("`", ""))),
         location(entry),
       ]),
     ),
