@@ -67,6 +67,11 @@ export type SearchRunner = (
   cwd: string,
 ) => Promise<SearchProcessResult>;
 
+export interface CandidateSearchOptions {
+  paths?: string[];
+  runner?: SearchRunner;
+}
+
 export const runRipgrep: SearchRunner = (args, cwd) =>
   new Promise((resolve, reject) => {
     const child = spawn("rg", args, {
@@ -120,6 +125,19 @@ export function extractSearchTerms(claimText: string): string[] {
   return terms;
 }
 
+function isSearchablePath(path: string): boolean {
+  const normalizedPath = path.replaceAll("\\", "/");
+  return !(
+    normalizedPath === ".driftwatch" ||
+    normalizedPath.startsWith(".driftwatch/") ||
+    normalizedPath === ".git" ||
+    normalizedPath.startsWith(".git/") ||
+    normalizedPath === "node_modules" ||
+    normalizedPath.startsWith("node_modules/") ||
+    normalizedPath.includes("/node_modules/")
+  );
+}
+
 function parseMatchCounts(output: string): Map<string, number> {
   const counts = new Map<string, number>();
 
@@ -165,10 +183,11 @@ function parseMatchCounts(output: string): Map<string, number> {
 export async function findCandidates(
   root: string,
   claim: Claim,
-  runner: SearchRunner = runRipgrep,
+  options: CandidateSearchOptions = {},
 ): Promise<CandidateFile[]> {
   const terms = extractSearchTerms(claim.text);
-  if (terms.length === 0) {
+  const paths = options.paths?.filter(isSearchablePath);
+  if (terms.length === 0 || paths?.length === 0) {
     return [];
   }
 
@@ -187,11 +206,11 @@ export async function findCandidates(
   for (const term of terms) {
     args.push("-e", term);
   }
-  args.push(".");
+  args.push("--", ...(paths ?? ["."]));
 
   let result: SearchProcessResult;
   try {
-    result = await runner(args, root);
+    result = await (options.runner ?? runRipgrep)(args, root);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new OperationalError(

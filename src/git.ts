@@ -34,3 +34,23 @@ export async function getCurrentCommit(root: string): Promise<string> {
     );
   }
 }
+
+export async function getChangedFiles(
+  root: string,
+  baseCommit: string,
+  headCommit: string,
+): Promise<string[]> {
+  try {
+    const { stdout } = await execFileAsync(
+      "git",
+      ["diff", "--name-only", "-z", `${baseCommit}..${headCommit}`, "--"],
+      { cwd: root, encoding: "utf8" },
+    );
+    return stdout.split("\0").filter((path) => path.length > 0);
+  } catch (error) {
+    throw new OperationalError(
+      `could not compare ${baseCommit} to ${headCommit}; verify the stored commit still exists`,
+      { cause: error },
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { checkCommand } from "./commands/check.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
 import { OperationalError } from "./errors.js";
@@ -36,7 +37,15 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("check")
     .description("Re-verify claims affected by repository changes")
-    .action(() => unavailable("check"));
+    .action(async () => {
+      const summary = await checkCommand(cwd);
+      process.stdout.write(
+        `Checked ${summary.checkedClaimCount} claims at ${summary.commit}\n`,
+      );
+      if (summary.hasViolations) {
+        process.exitCode = 1;
+      }
+    });
 
   program
     .command("report")

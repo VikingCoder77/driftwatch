@@ -51,7 +51,7 @@ describe("findCandidates", () => {
       exitCode: 0,
     });
 
-    await expect(findCandidates("/repo", claim, runner)).resolves.toEqual([
+    await expect(findCandidates("/repo", claim, { runner })).resolves.toEqual([
       { path: "src/c.ts", matchCount: 4 },
       { path: "src/b.ts", matchCount: 3 },
       { path: "src/a.ts", matchCount: 2 },
@@ -69,6 +69,8 @@ describe("findCandidates", () => {
       exitCode: 1,
     });
 
-    await expect(findCandidates("/repo", claim, runner)).resolves.toEqual([]);
+    await expect(findCandidates("/repo", claim, { runner })).resolves.toEqual(
+      [],
+    );
   });
 });
