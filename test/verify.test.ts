@@ -96,4 +96,39 @@ describe("verifyClaim", () => {
       ),
     ).rejects.toMatchObject({ exitCode: 2 });
   });
+
+  it.each(["SATISFIED", "VIOLATED"])(
+    "downgrades %s results based only on documentation",
+    async (status) => {
+      const directory = await mkdtemp(join(tmpdir(), "driftwatch-verify-"));
+      temporaryDirectories.push(directory);
+      await writeFile(
+        join(directory, "README.md"),
+        "The command returns pong.\n",
+      );
+      const backend = new RecordingBackend(
+        JSON.stringify({
+          status,
+          file: "README.md",
+          lines: "1-1",
+          evidence: "The README states that the command returns pong.",
+        }),
+      );
+
+      await expect(
+        verifyClaim(
+          directory,
+          claim,
+          [{ path: "README.md", matchCount: 1 }],
+          backend,
+        ),
+      ).resolves.toEqual({
+        status: "NOT_FOUND",
+        file: null,
+        lines: null,
+        evidence:
+          "Only documentation matched; no direct implementation evidence was found.",
+      });
+    },
+  );
 });

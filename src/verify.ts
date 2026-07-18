@@ -1,3 +1,4 @@
+import { extname } from "node:path";
 import type { Backend } from "./backend.js";
 import { loadCandidateContexts } from "./context.js";
 import { ModelOutputError, OperationalError } from "./errors.js";
@@ -8,6 +9,12 @@ import {
   VerificationResultSchema,
 } from "./schemas.js";
 import { type CandidateFile, extractSearchTerms } from "./search.js";
+
+const DOCUMENTATION_EXTENSIONS = new Set([".adoc", ".md", ".mdx", ".rst"]);
+
+function isDocumentationPath(path: string): boolean {
+  return DOCUMENTATION_EXTENSIONS.has(extname(path).toLowerCase());
+}
 
 function buildVerificationPrompt(
   claim: Claim,
@@ -78,6 +85,20 @@ export async function verifyClaim(
     throw new OperationalError(
       `Codex cited a file outside the candidates for ${claim.id}`,
     );
+  }
+
+  if (
+    result.status !== "NOT_FOUND" &&
+    result.file !== null &&
+    isDocumentationPath(result.file)
+  ) {
+    return {
+      status: "NOT_FOUND",
+      file: null,
+      lines: null,
+      evidence:
+        "Only documentation matched; no direct implementation evidence was found.",
+    };
   }
 
   return result;
