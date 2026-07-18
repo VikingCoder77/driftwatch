@@ -1,0 +1,44 @@
+{
+  "name": "driftwatch",
+  "version": "0.1.0",
+  "description": "Detect implementation drift between product requirements and code.",
+  "type": "module",
+  "bin": {
+    "driftwatch": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "cli",
+    "codex",
+    "prd",
+    "requirements"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^15.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.4",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
