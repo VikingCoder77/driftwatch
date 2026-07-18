@@ -1,6 +1,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { type Backend, CodexBackend } from "../backend.js";
+import { mapConcurrent } from "../concurrency.js";
 import { OperationalError } from "../errors.js";
 import { extractClaims } from "../extract.js";
 import { findGitRoot, getCurrentCommit } from "../git.js";
@@ -17,6 +18,8 @@ export interface IngestSummary {
 interface IngestDependencies {
   createBackend?: (config: Config, root: string) => Backend;
 }
+
+const VERIFICATION_CONCURRENCY = 4;
 
 function recordPrdPath(root: string, absolutePath: string): string {
   const relativePath = relative(root, absolutePath);
@@ -61,16 +64,22 @@ export async function ingestCommand(
     dependencies.createBackend?.(config, root) ??
     new CodexBackend(config.model, root);
   const claims = await extractClaims(prd.content, backend);
-  const mapping: Record<string, MappingEntry> = {};
-
-  for (const claim of claims) {
-    const candidates = await findCandidates(root, claim);
-    const verification = await verifyClaim(root, claim, candidates, backend);
-    mapping[claim.id] = {
-      ...verification,
-      checkedAtCommit: initialCommit,
-    };
-  }
+  const entries = await mapConcurrent(
+    claims,
+    VERIFICATION_CONCURRENCY,
+    async (claim): Promise<[string, MappingEntry]> => {
+      const candidates = await findCandidates(root, claim);
+      const verification = await verifyClaim(root, claim, candidates, backend);
+      return [
+        claim.id,
+        {
+          ...verification,
+          checkedAtCommit: initialCommit,
+        },
+      ];
+    },
+  );
+  const mapping = Object.fromEntries(entries);
 
   const finalCommit = await getCurrentCommit(root);
   if (finalCommit !== initialCommit) {
