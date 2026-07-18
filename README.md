@@ -26,6 +26,17 @@ npm run build
 npm test
 ```
 
+## Test in 2 Commands
+
+The bundled fixture contains three genuine violations and three satisfied controls:
+
+```sh
+npm run dev -- ingest demo/PRD.md
+npm run dev -- report
+```
+
+The report is also stored at `.driftwatch/DRIFT.md` for review or commit.
+
 Run the CLI from source:
 
 ```sh
