@@ -18,6 +18,22 @@ export PATH="/Applications/ChatGPT.app/Contents/Resources:$PATH"
 codex --version
 ```
 
+## Install
+
+Run the published CLI without a global installation:
+
+```sh
+npx driftwatch --help
+```
+
+From a repository checkout, install dependencies and compile the same package locally:
+
+```sh
+npm install
+npm run build
+node dist/cli.js --help
+```
+
 ## Development
 
 ```sh
@@ -58,3 +74,7 @@ The v1 interface contains exactly four commands:
 - `driftwatch report`
 
 See `driftwatch-prd.md` for the complete product contract and numbered acceptance requirements.
+
+## Built with Codex
+
+Driftwatch was designed and implemented through Codex sessions using GPT-5.6 Sol. Codex was used for repository scaffolding, implementation, tests, candidate-ranking diagnosis, and live end-to-end verification against the bundled demo; the resulting state and report are committed for review.

@@ -44,9 +44,9 @@ The explicit script shell is needed because the managed environment's reduced `P
 
 ## Immediate Next Steps
 
-1. Improve README packaging and installation instructions for judge use.
-2. Add the required animated report asset or another polished terminal-demo capture.
-3. Dogfood incremental `check` against a committed demo change.
+1. Add the required animated report asset or another polished terminal-demo capture.
+2. Review npm publication metadata and publish the package when credentials and final versioning are ready.
+3. Run Driftwatch against its own full PRD and compare extracted claims with the numbered requirements.
 
 ## Live Codex Validation
 
@@ -67,6 +67,7 @@ The explicit script shell is needed because the managed environment's reduced `P
 - `report` exits with code 1 as required and writes identical content to `.driftwatch/DRIFT.md`.
 - A live first-run `check` reverified all 6 claims at commit `26a063b` and exited with code 1 because the three intentional violations remain.
 - An immediate second `check` at the same HEAD verified 0 claims, preserved the stored mapping, and still exited with code 1.
+- `npm pack` produced a 21.2 kB package, a clean temporary install linked `node_modules/.bin/driftwatch` to `dist/cli.js`, and the installed CLI help smoke test passed.
 
 ## Resume Instructions
 

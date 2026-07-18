@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is currently specification-first. `driftwatch-prd.md` is the authoritative product contract; numbered goals and requirements (`G1`, `R1`, `M1`, and similar) should remain testable and traceable to implementation. `LICENSE` contains the project license.
+This repository is specification-first. `driftwatch-prd.md` is the product contract; goals and requirements (`G1`, `R1`, `M1`, and similar) should remain testable and traceable to implementation. `LICENSE` contains the project license.
 
 The Node-compatible CLI lives under `src/`, with automated tests under `test/` and compiled output in `dist/`. Keep tests aligned with source modules and place the required sample project under `demo/` when added. Runtime state belongs only in a target repository's `.driftwatch/` directory; do not write generated state elsewhere.
 
@@ -35,4 +35,4 @@ Vitest is the test framework; no coverage threshold is configured yet. New imple
 
 ## Commit & Pull Request Guidelines
 
-History currently contains only `Initial commit`, so no formal convention exists. Use short, imperative subjects such as `Add claim schema validation`. Keep commits narrowly scoped and cite relevant requirement IDs in the body when useful. Pull requests should summarize behavior, list validated commands, link issues or PRD requirements, and include terminal output or screenshots when report formatting changes.
+History uses short, imperative subjects such as `Add incremental drift checks` and `Seed validated demo drift report`; Conventional Commit prefixes are not required. Keep commits narrowly scoped and cite relevant requirement IDs in the body when useful. Pull requests should summarize behavior, list validated commands, link issues or PRD requirements, and include terminal output or screenshots when report formatting changes.
