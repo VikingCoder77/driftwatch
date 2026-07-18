@@ -78,6 +78,9 @@ describe("reportCommand", () => {
         checkedAtCommit: "abc123",
       },
     });
+    await writeState(repository, "state.json", {
+      lastCheckedCommit: "stale456",
+    });
 
     const report = await reportCommand(repository);
 

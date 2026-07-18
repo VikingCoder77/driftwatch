@@ -45,13 +45,13 @@ function resultCommit(
   state: State,
   mapping: Record<string, MappingEntry>,
 ): string {
-  if (state.lastCheckedCommit !== undefined) {
-    return state.lastCheckedCommit;
-  }
   const commits = new Set(
     Object.values(mapping).map((entry) => entry.checkedAtCommit),
   );
-  return commits.size === 1 ? ([...commits][0] ?? "unknown") : "unknown";
+  if (commits.size === 1) {
+    return [...commits][0] ?? "unknown";
+  }
+  return state.lastCheckedCommit ?? "unknown";
 }
 
 export function renderDriftReport(
