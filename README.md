@@ -11,7 +11,18 @@ Driftwatch detects when implementation quietly diverges from a product requireme
 - Node.js 20 or newer
 - Git
 - `rg` (ripgrep)
-- An installed and authenticated Codex CLI available as `codex` on `PATH`
+- One installed and authenticated inference harness on `PATH`
+
+Supported harnesses:
+
+| Backend value | Executable | Initialization example |
+| --- | --- | --- |
+| `codex` | [`codex`](https://learn.chatgpt.com/docs/codex/cli) | `driftwatch init --backend codex --model gpt-5.6-sol` |
+| `opencode` | [`opencode`](https://dev.opencode.ai/docs/cli/) | `driftwatch init --backend opencode --model anthropic/claude-sonnet-4-6` |
+| `claude-code` | [`claude`](https://code.claude.com/docs/en/headless) | `driftwatch init --backend claude-code --model sonnet` |
+| `antigravity` | [`agy`](https://antigravity.google/docs/cli-reference) | `driftwatch init --backend antigravity --model "Gemini 3.5 Flash (Low)"` |
+
+Omit `--model` to use the selected harness's configured default. The shipped default remains Codex with `gpt-5.6-sol`.
 
 The ChatGPT desktop app bundles Codex on macOS. If `codex --version` is not found, expose that binary for the current shell:
 
@@ -58,19 +69,21 @@ The expected summary is `3 violated · 0 unimplemented · 3 satisfied`. `report`
 Run the CLI from source:
 
 ```sh
-npm run dev -- init
+npm run dev -- init --backend codex
 npm run dev -- ingest driftwatch-prd.md
 npm run dev -- check
 npm run dev -- report
 ```
 
-`init` creates `.driftwatch/config.json` and `.driftwatch/state.json` at the Git repository root. `ingest` extracts claims, ranks up to three candidate files per claim with ripgrep, verifies them through the local Codex CLI, and writes `claims.json` plus `mapping.json`. `check` re-verifies only claims affected since the stored baseline commit and retries previously unmapped claims against changed files. `report` performs no inference; it prints the stored status and writes identical Markdown to `.driftwatch/DRIFT.md`. Generated state is human-readable and intended to be committed.
+`init` creates `.driftwatch/config.json` and `.driftwatch/state.json` at the Git repository root. `ingest` extracts claims, ranks up to three candidate files per claim with ripgrep, verifies them through the selected local harness, and writes `claims.json` plus `mapping.json`. `check` re-verifies only claims affected since the stored baseline commit and retries previously unmapped claims against changed files. `report` performs no inference; it prints the stored status and writes identical Markdown to `.driftwatch/DRIFT.md`. Generated state is human-readable and intended to be committed.
+
+To switch an initialized repository, edit `.driftwatch/config.json`: set `backend` to `codex`, `opencode`, `claude-code`, or `antigravity`, and set `model` to a harness-specific model string or `null` for its default. Driftwatch invokes harnesses non-interactively and restricts their tools where the CLI exposes a read-only mechanism.
 
 ## Commands
 
 The v1 interface contains exactly four commands:
 
-- `driftwatch init`
+- `driftwatch init [--backend <name>] [--model <model>]`
 - `driftwatch ingest <path-to-prd.md>`
 - `driftwatch check`
 - `driftwatch report`

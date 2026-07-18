@@ -1,6 +1,6 @@
 # Driftwatch — Product Requirements Document
 
-**Version:** 1.0 (Hackathon v1 — OpenAI Codex Challenge, Developer Tools track)
+**Version:** 1.1 (Hackathon v1 — OpenAI Codex Challenge, Developer Tools track)
 **Status:** Approved for build
 **Owner:** Thomas / NPT Solutions
 **Build window:** 6 days, built entirely in Codex with GPT-5.6
@@ -23,14 +23,14 @@ AI coding agents write code faster than humans can verify it against intent. A d
 ## 3. Non-Goals (v1)
 
 - NG1: Driftwatch does not auto-fix violations. It reports; the developer or their agent fixes.
-- NG2: No support for LLM backends other than the Codex CLI. (An internal backend interface exists, but only one implementation ships.) *Rationale: hackathon focus; Claude Code / Gemini / raw-API adapters are v2.*
+- NG2: No direct provider API integrations or API-key handling. Inference is available only through supported, locally installed harness CLIs.
 - NG3: No waiver system and no PRD re-ingest diffing. Re-running `ingest` performs a full replacement of claims. *Rationale: real-product features, not demo features.*
 - NG4: No CI-specific mode, no GitHub/GitLab integration, no web UI, no multi-PRD support.
 - NG5: No configuration server or telemetry. All state is local files committed to the repo.
 
 ## 4. User Stories
 
-- US1: As a developer using Codex, I want to ingest my PRD once so that every assertion in it becomes a tracked claim.
+- US1: As a developer using a supported coding harness, I want to ingest my PRD once so that every assertion in it becomes a tracked claim.
 - US2: As a developer finishing an agent coding session, I want to run one command that tells me whether the session broke any spec commitment, so I catch drift before it compounds.
 - US3: As a developer reviewing a drift report, I want file-and-line evidence for each violation so I can judge it in seconds without re-reading the PRD.
 - US4: As a hackathon judge, I want to clone the repo, run two commands, and see a real drift report on sample data.
@@ -38,13 +38,13 @@ AI coding agents write code faster than humans can verify it against intent. A d
 
 ## 5. Product Overview
 
-Driftwatch is a command-line tool. It maintains three pieces of durable state inside the target repository and exposes four commands. All model inference is delegated to the locally installed Codex CLI via non-interactive execution; driftwatch itself contains no API keys and makes no direct network calls.
+Driftwatch is a command-line tool. It maintains three pieces of durable state inside the target repository and exposes four commands. All model inference is delegated to a selected, locally installed harness CLI via non-interactive execution; driftwatch itself contains no API keys and makes no direct network calls.
 
 ### 5.1 Commands
 
 - R1: The CLI binary is named `driftwatch`.
 - R2: The CLI provides exactly four commands in v1: `init`, `ingest`, `check`, and `report`.
-- R3: `driftwatch init` creates a `.driftwatch/` directory at the repository root containing `config.json` and an empty `state.json`. If `.driftwatch/` already exists, `init` exits with code 2 and does not overwrite anything.
+- R3: `driftwatch init [--backend <name>] [--model <model>]` creates a `.driftwatch/` directory at the repository root containing `config.json` and an empty `state.json`. If `.driftwatch/` already exists, `init` exits with code 2 and does not overwrite anything.
 - R4: `driftwatch ingest <path-to-prd.md>` extracts claims from the given Markdown file and writes them to `.driftwatch/claims.json`, fully replacing any previous contents.
 - R5: `driftwatch ingest` then performs a full mapping pass: for every claim, it locates candidate files and verifies each claim against them, writing results to `.driftwatch/mapping.json`.
 - R6: `driftwatch check` re-verifies only the claims whose mapped files appear in `git diff --name-only <last-checked-commit>..HEAD`, plus attempts to map any currently unmapped (`NOT_FOUND`) claims against files in that diff.
@@ -57,7 +57,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 - R10: `check` and `report` exit with code 0 when no claim has status `VIOLATED`.
 - R11: `check` and `report` exit with code 1 when at least one claim has status `VIOLATED`.
 - R12: Claims with status `NOT_FOUND` (unimplemented) never cause a non-zero exit code.
-- R13: Operational failures (Codex CLI not found, not a git repository, missing `claims.json`) exit with code 2 and print a one-line actionable error message.
+- R13: Operational failures (selected harness CLI not found, not a git repository, missing `claims.json`) exit with code 2 and print a one-line actionable error message.
 
 ### 5.3 Claim Extraction
 
@@ -81,14 +81,14 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 - R25: A file larger than 24,000 characters is chunked, and only chunks containing at least one search-term hit (plus 40 lines of surrounding context) are included in the prompt.
 - R26: Verification results are written to `.driftwatch/mapping.json` keyed by claim id, each entry also storing `checkedAtCommit`.
 
-### 5.6 Codex Backend
+### 5.6 Inference Harness Backends
 
 - R27: All inference runs through a single internal `Backend` interface with one method: given a prompt string, return the model's raw text output.
-- R28: The v1 backend invokes the Codex CLI in non-interactive mode (`codex exec`) as a subprocess.
+- R28: V1 supports four harness adapters invoked as subprocesses in non-interactive mode: Codex (`codex exec`), OpenCode (`opencode run`), Claude Code (`claude -p`), and Antigravity (`agy -p`).
 - R29: Driftwatch extracts the first syntactically valid JSON value (fenced or raw) from the backend's stdout before schema validation, discarding any surrounding text.
 - R30: Every inference prompt ends with an instruction to respond with only JSON matching the given schema.
-- R31: If the `codex` executable is not found on PATH, driftwatch exits with code 2 and a message telling the user to install the Codex CLI.
-- R32: The model to use is read from `config.json` key `model`; the backend passes it to the Codex CLI. The shipped default is GPT‑5.6 Sol (`gpt-5.6-sol`).
+- R31: If the selected harness executable is not found on PATH, driftwatch exits with code 2 and a message naming the missing CLI and executable.
+- R32: The selected harness and model are read from `config.json`; a non-null `model` is passed using that harness's model flag, while `null` uses its configured default. The shipped default is Codex with GPT‑5.6 Sol (`gpt-5.6-sol`).
 
 ### 5.7 Report Output
 
@@ -100,7 +100,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 
 ### 5.8 State & Config Files
 
-- R38: `.driftwatch/config.json` contains at minimum: `backend` (fixed value `"codex"` in v1), `model`, and `prdPath` (recorded by the most recent `ingest`).
+- R38: `.driftwatch/config.json` contains `backend` (one of `"codex"`, `"opencode"`, `"claude-code"`, or `"antigravity"`), `model` (a non-empty string or null), and `prdPath` (recorded by the most recent `ingest`).
 - R39: All three state files (`claims.json`, `mapping.json`, `state.json`) are plain JSON, human-readable, and intended to be committed to version control.
 - R40: Driftwatch never modifies any file outside the `.driftwatch/` directory.
 
@@ -117,12 +117,12 @@ Hackathon framing — leading indicators only:
 
 - M1: Demo-repo report is fully reproducible by a third party from README instructions alone (binary pass/fail, tested by a non-author before submission).
 - M2: End-to-end `ingest` on driftwatch's own PRD (this document) completes in under 10 minutes and extracts ≥ 35 claims.
-- M3: Incremental `check` on a 10-file diff spawns ≤ 6 Codex subprocesses.
+- M3: Incremental `check` on a 10-file diff spawns ≤ 6 inference-harness subprocesses.
 - M4: Zero false `VIOLATED` results on the demo repo after prompt tuning (false `NOT_FOUND` is tolerated; false violations destroy trust and demo credibility).
 
 ## 8. Open Questions
 
-- Q1 (blocking, resolve Day 1): Exact Codex CLI flags for non-interactive JSON-friendly output with a pinned model — verify against the installed CLI version before writing the backend.
+- Q1 (blocking before release): Complete authenticated live smoke tests for OpenCode, Claude Code, and Antigravity on machines where those CLIs are installed.
 - Q2 (non-blocking): Whether extraction quality improves by sending the PRD per-section rather than whole-document; time-boxed to a 2-hour experiment on Day 3 if extraction is noisy.
 - Q3 (non-blocking): Minimum viable chunking strategy for very large files — start with R25's rule; revisit only if demo repo needs it.
 
@@ -132,4 +132,4 @@ Six days, fixed by the challenge deadline. Day 1: schemas + extraction + backend
 
 ## 10. Roadmap (post-hackathon, explicitly not v1)
 
-Waivers with committed rationale, PRD re-ingest diffing with claim identity carry-over, pluggable backends (Claude Code, Gemini CLI, OpenCode, raw API for CI), cross-model verification ("verifier ≠ builder"), and a CI-native mode.
+Waivers with committed rationale, PRD re-ingest diffing with claim identity carry-over, additional named harness adapters, optional raw APIs for CI, cross-model verification ("verifier ≠ builder"), and a CI-native mode.
