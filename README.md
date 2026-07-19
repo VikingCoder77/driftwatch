@@ -1,10 +1,46 @@
 # Driftwatch
 
-Driftwatch detects when implementation quietly diverges from a product requirements document. It turns testable PRD assertions into tracked claims and reports violations with file-and-line evidence.
+**Spec-drift detection for agentic coding.** Driftwatch verifies your codebase against your PRD — not code against code, but code against intent.
 
-![Animated Driftwatch report showing three seeded violations](assets/driftwatch-demo.gif)
+AI agents write code faster than anyone can check it against the spec. Across enough sessions, implementations quietly diverge: a signing step dropped, a limit changed, a feature never built. Tests pass, linters are happy, and the spec is broken. Driftwatch turns every testable assertion in a PRD into a tracked claim and reports which claims your code satisfies, violates, or has not implemented — with file-and-line evidence.
 
-> **Status:** The four-command v1 flow and live-validated demo are implemented. npm publication and final challenge submission assets remain.
+![Driftwatch report showing three seeded violations](https://raw.githubusercontent.com/vikingcoder77/driftwatch/main/assets/driftwatch-demo.gif)
+
+```
+❌ VIOLATED      3   ⚠️ UNIMPLEMENTED  0   ✅ SATISFIED  3        commit a1b2c3d
+
+❌ C7   Manifests are signed with ed25519 before upload
+        src/sync/manifest.ts:140 — signing call removed; TODO comment left in place
+```
+
+A violated claim prints with enough context that your next prompt to the agent is literally *"fix claim C7."*
+
+## How it works
+
+1. **`driftwatch ingest <prd.md>`** — extracts every testable assertion from the PRD into `claims.json`, finds up to three candidate files per claim with ripgrep, and verifies each claim through a fresh local agent: `SATISFIED`, `VIOLATED`, or `NOT_FOUND`, with evidence.
+2. **`driftwatch check`** — the daily driver. Re-verifies only claims whose mapped files changed since the last checked commit (via `git diff`), and retries unmapped claims against changed files. Seconds, not a re-scan.
+3. **`driftwatch report`** — prints the current status with no inference and writes the same content to `.driftwatch/DRIFT.md`. Exits `1` if any claim is violated, so it drops straight into CI.
+
+Verification always runs in a clean agent with zero memory of the session that wrote the code. The agent that built a feature will rationalize its own drift; a cold reader won't.
+
+All state (`claims.json`, `mapping.json`, `state.json`) is human-readable JSON at the Git repository root under `.driftwatch/`, intended to be committed. Driftwatch never modifies files outside that directory, contains no API keys, and makes no network calls of its own — all inference is delegated to the harness already installed on your machine.
+
+## Try it in 2 commands
+
+For judges and the impatient — from a fresh checkout, no build step:
+
+```sh
+npm install
+npm run dev -- ingest demo/PRD.md && npm run dev -- report
+```
+
+Expected summary: `3 violated · 0 unimplemented · 3 satisfied`. The violations in `demo/` are intentionally seeded; `report` exits with code `1` and writes `.driftwatch/DRIFT.md`.
+
+Quick smoke test without cloning anything:
+
+```sh
+npx driftwatch --help
+```
 
 ## Requirements
 
@@ -13,20 +49,18 @@ Driftwatch detects when implementation quietly diverges from a product requireme
 - `rg` (ripgrep)
 - One installed and authenticated inference harness on `PATH`
 
-Supported harnesses:
+Driftwatch is Codex-first and validated end-to-end with Codex + GPT-5.6 Sol. The backend is pluggable, so other agent CLIs work through the same interface:
 
-| Backend value | Executable | Initialization example |
+| Backend | Executable | Initialization example |
 | --- | --- | --- |
-| `codex` | [`codex`](https://learn.chatgpt.com/docs/codex/cli) | `driftwatch init --backend codex --model gpt-5.6-sol` |
+| `codex` (default) | [`codex`](https://learn.chatgpt.com/docs/codex/cli) | `driftwatch init --backend codex --model gpt-5.6-sol` |
 | `opencode` | [`opencode`](https://dev.opencode.ai/docs/cli/) | `driftwatch init --backend opencode --model anthropic/claude-sonnet-4-6` |
 | `claude-code` | [`claude`](https://code.claude.com/docs/en/headless) | `driftwatch init --backend claude-code --model sonnet` |
 | `antigravity` | [`agy`](https://antigravity.google/docs/cli-reference) | `driftwatch init --backend antigravity --model "Gemini 3.5 Flash (Low)"` |
 
-Omit `--model` to use the selected harness's configured default. The shipped default remains Codex with `gpt-5.6-sol`.
+Omit `--model` to use the harness's configured default. Release validation ran the full demo on Codex, OpenCode 1.14.50, and Antigravity 1.0.13 — each produced the identical `3 violated · 0 unimplemented · 3 satisfied` report. Claude Code 2.1.214 accepts the configured non-interactive flags; full validation is tracked for v0.2.
 
-Release validation covers the full demo with Codex, OpenCode 1.14.50, and Antigravity 1.0.13; each produced the expected `3 violated · 0 unimplemented · 3 satisfied` report. Claude Code 2.1.214 accepts the configured non-interactive flags, but an authenticated Claude smoke remains pending.
-
-The ChatGPT desktop app bundles Codex on macOS. If `codex --version` is not found, expose that binary for the current shell:
+**macOS note:** the ChatGPT desktop app bundles Codex. If `codex --version` is not found:
 
 ```sh
 export PATH="/Applications/ChatGPT.app/Contents/Resources:$PATH"
@@ -35,19 +69,35 @@ codex --version
 
 ## Install
 
-After npm publication, run the CLI without a global installation:
-
 ```sh
-npx driftwatch --help
+npx driftwatch --help        # no install
+npm install -g driftwatch    # or global
 ```
 
-From a repository checkout, install dependencies and compile the same package locally:
+From source:
 
 ```sh
 npm install
 npm run build
 node dist/cli.js --help
 ```
+
+## Usage
+
+```sh
+driftwatch init [--backend <name>] [--model <model>]   # creates .driftwatch/ at the repo root
+driftwatch ingest <path-to-prd.md>                     # extract claims + full verification pass
+driftwatch check                                        # incremental re-verification off git diff
+driftwatch report                                       # print status, write DRIFT.md, exit 1 on violations
+```
+
+The v1 interface is exactly these four commands. To switch harnesses in an initialized repository, edit `.driftwatch/config.json`: set `backend` and set `model` to a harness-specific string or `null` for its default. Driftwatch invokes harnesses non-interactively and restricts their tools to read-only wherever the CLI exposes a mechanism for it.
+
+The complete product contract, including all 44 numbered acceptance requirements, lives in [`driftwatch-prd.md`](driftwatch-prd.md) — which is also the first PRD Driftwatch was run against.
+
+## What Driftwatch is not
+
+Existing tools in this space analyze *agent behavior* — recurring mistakes, session patterns, code quality over time. Driftwatch does none of that. It answers one question only: **does the code still match the spec?** No auto-fixing, no behavioral analytics, no server, no telemetry.
 
 ## Development
 
@@ -57,41 +107,14 @@ npm run build
 npm test
 ```
 
-## Test in 2 Commands
-
-From a fresh repository checkout, install dependencies and run the bundled fixture without a build step:
-
-```sh
-npm install
-npm run dev -- ingest demo/PRD.md && npm run dev -- report
-```
-
-The expected summary is `3 violated · 0 unimplemented · 3 satisfied`. `report` exits with code `1` because the violations are intentional, and it stores the same output at `.driftwatch/DRIFT.md`.
-
-Run the CLI from source:
-
-```sh
-npm run dev -- init --backend codex
-npm run dev -- ingest driftwatch-prd.md
-npm run dev -- check
-npm run dev -- report
-```
-
-`init` creates `.driftwatch/config.json` and `.driftwatch/state.json` at the Git repository root. `ingest` extracts claims, ranks up to three candidate files per claim with ripgrep, verifies them through the selected local harness, and writes `claims.json` plus `mapping.json`. `check` re-verifies only claims affected since the stored baseline commit and retries previously unmapped claims against changed files. `report` performs no inference; it prints the stored status and writes identical Markdown to `.driftwatch/DRIFT.md`. Generated state is human-readable and intended to be committed.
-
-To switch an initialized repository, edit `.driftwatch/config.json`: set `backend` to `codex`, `opencode`, `claude-code`, or `antigravity`, and set `model` to a harness-specific model string or `null` for its default. Driftwatch invokes harnesses non-interactively and restricts their tools where the CLI exposes a read-only mechanism.
-
-## Commands
-
-The v1 interface contains exactly four commands:
-
-- `driftwatch init [--backend <name>] [--model <model>]`
-- `driftwatch ingest <path-to-prd.md>`
-- `driftwatch check`
-- `driftwatch report`
-
-See `driftwatch-prd.md` for the complete product contract and numbered acceptance requirements.
-
 ## Built with Codex
 
-Driftwatch was designed and implemented through Codex sessions using GPT-5.6 Sol. Codex was used for repository scaffolding, implementation, tests, candidate-ranking diagnosis, and live end-to-end verification against the bundled demo; the resulting state and report are committed for review.
+Driftwatch was designed and implemented entirely through Codex sessions using GPT-5.6 Sol: repository scaffolding, implementation, tests, candidate-ranking diagnosis, and live end-to-end verification against the bundled demo. It was then dogfooded on its own PRD — the committed `.driftwatch/` state and report are in this repository for review.
+
+## Roadmap
+
+Waivers with committed rationale, PRD re-ingest diffing with claim identity carry-over, cross-model verification (verifier ≠ builder), and a CI-native mode. The state format already supports all of it.
+
+## License
+
+MIT
