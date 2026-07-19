@@ -6,6 +6,7 @@ import {
   createBackend,
   OpenCodeBackend,
   type ProcessRunner,
+  verifierConfig,
 } from "../src/backend.js";
 import type { OperationalError } from "../src/errors.js";
 
@@ -150,6 +151,21 @@ describe("createBackend", () => {
     );
 
     expect(backend).toBeInstanceOf(BackendClass);
+  });
+
+  it("resolves an independent verifier harness and model", () => {
+    expect(
+      verifierConfig({
+        backend: "codex",
+        model: "gpt-builder",
+        verifierBackend: "claude-code",
+        verifierModel: "sonnet-verifier",
+        prdPath: null,
+      }),
+    ).toMatchObject({
+      backend: "claude-code",
+      model: "sonnet-verifier",
+    });
   });
 
   it("names the missing selected harness in operational errors", async () => {

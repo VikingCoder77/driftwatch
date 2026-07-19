@@ -111,4 +111,25 @@ describe("initCommand", () => {
       prdPath: null,
     });
   });
+
+  it("stores an independent verifier harness and model", async () => {
+    const repository = await createRepository();
+
+    const createdDirectory = await initCommand(repository, {
+      backend: "codex",
+      model: "gpt-builder",
+      verifierBackend: "claude-code",
+      verifierModel: "sonnet-verifier",
+    });
+    const config = JSON.parse(
+      await readFile(join(createdDirectory, "config.json"), "utf8"),
+    );
+
+    expect(config).toMatchObject({
+      backend: "codex",
+      model: "gpt-builder",
+      verifierBackend: "claude-code",
+      verifierModel: "sonnet-verifier",
+    });
+  });
 });

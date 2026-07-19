@@ -226,3 +226,13 @@ export function createBackend(
       return new AntigravityBackend(config.model, cwd, "agy", runner);
   }
 }
+
+export function verifierConfig(config: Config): Config {
+  return {
+    ...config,
+    backend: config.verifierBackend ?? config.backend,
+    model:
+      config.verifierModel ??
+      (config.verifierBackend === null ? config.model : null),
+  };
+}

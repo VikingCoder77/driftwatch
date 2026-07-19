@@ -220,4 +220,49 @@ describe("ingestCommand", () => {
       C7: { rationale: "Temporary migration.", waivedAtCommit: head },
     });
   });
+
+  it("extracts with the builder and verifies with a different model", async () => {
+    const repository = await createCommittedRepository();
+    await writeState(repository, "config.json", {
+      backend: "codex",
+      model: "gpt-builder",
+      verifierBackend: "claude-code",
+      verifierModel: "sonnet-verifier",
+      prdPath: null,
+    });
+    const builder = new SequenceBackend([
+      JSON.stringify([
+        {
+          id: "C1",
+          section: "Service",
+          text: "The handler returns pong.",
+          type: "behavior",
+          sourceId: "R1",
+        },
+      ]),
+    ]);
+    const verifier = new SequenceBackend([
+      JSON.stringify({
+        status: "SATISFIED",
+        file: "service.ts",
+        lines: "1-1",
+        evidence: "The handler directly returns pong.",
+      }),
+    ]);
+    const selections: string[] = [];
+
+    await ingestCommand(repository, "PRD.md", {
+      createBackend: (config, _root, role) => {
+        selections.push(`${role}:${config.backend}:${config.model}`);
+        return role === "builder" ? builder : verifier;
+      },
+    });
+
+    expect(selections).toEqual([
+      "builder:codex:gpt-builder",
+      "verifier:claude-code:sonnet-verifier",
+    ]);
+    expect(builder.prompts).toHaveLength(1);
+    expect(verifier.prompts).toHaveLength(1);
+  });
 });

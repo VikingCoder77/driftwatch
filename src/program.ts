@@ -21,10 +21,24 @@ export function createProgram(cwd = process.cwd()): Command {
         .default("codex"),
     )
     .option("-m, --model <model>", "harness model name")
-    .action(async (options: { backend: BackendName; model?: string }) => {
-      const directory = await initCommand(cwd, options);
-      process.stdout.write(`Initialized ${directory}\n`);
-    });
+    .addOption(
+      new Option(
+        "--verifier-backend <backend>",
+        "verification harness",
+      ).choices([...BackendNameSchema.options]),
+    )
+    .option("--verifier-model <model>", "verification model name")
+    .action(
+      async (options: {
+        backend: BackendName;
+        model?: string;
+        verifierBackend?: BackendName;
+        verifierModel?: string;
+      }) => {
+        const directory = await initCommand(cwd, options);
+        process.stdout.write(`Initialized ${directory}\n`);
+      },
+    );
 
   program
     .command("ingest <prd>")

@@ -15,6 +15,8 @@ const DEFAULT_MODELS: Record<BackendName, string | null> = {
 export interface InitOptions {
   backend?: BackendName;
   model?: string;
+  verifierBackend?: BackendName;
+  verifierModel?: string;
 }
 
 export async function initCommand(
@@ -42,8 +44,8 @@ export async function initCommand(
   const config: Config = {
     backend,
     model: options.model ?? DEFAULT_MODELS[backend],
-    verifierBackend: null,
-    verifierModel: null,
+    verifierBackend: options.verifierBackend ?? null,
+    verifierModel: options.verifierModel ?? null,
     prdPath: null,
   };
   const state: State = { waivers: {} };

@@ -392,4 +392,51 @@ describe("checkCommand", () => {
     });
     expect(backend.prompts).toHaveLength(0);
   });
+
+  it("uses the configured verifier instead of the builder", async () => {
+    const repository = await createRepository();
+    await writeFile(
+      join(repository, "service.ts"),
+      "export const ready = true;\n",
+    );
+    await writeState(repository, "config.json", {
+      backend: "codex",
+      model: "gpt-builder",
+      verifierBackend: "opencode",
+      verifierModel: "anthropic/claude-verifier",
+      prdPath: null,
+    });
+    await writeState(repository, "claims.json", [
+      {
+        id: "C1",
+        section: "Service",
+        text: "The service is ready.",
+        type: "behavior",
+      },
+    ]);
+    await writeState(repository, "mapping.json", {});
+    await commit(repository, "fixture");
+    const backend = new SequenceBackend([
+      JSON.stringify({
+        status: "SATISFIED",
+        file: "service.ts",
+        lines: "1-1",
+        evidence: "The ready flag is true.",
+      }),
+    ]);
+    let selectedConfig: unknown;
+
+    await checkCommand(repository, {
+      createBackend: (config) => {
+        selectedConfig = config;
+        return backend;
+      },
+    });
+
+    expect(selectedConfig).toMatchObject({
+      backend: "opencode",
+      model: "anthropic/claude-verifier",
+    });
+    expect(backend.prompts).toHaveLength(1);
+  });
 });

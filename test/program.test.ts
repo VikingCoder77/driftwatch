@@ -27,5 +27,12 @@ describe("createProgram", () => {
     expect(init?.options.some((option) => option.long === "--model")).toBe(
       true,
     );
+    expect(
+      init?.options.find((option) => option.long === "--verifier-backend")
+        ?.argChoices,
+    ).toEqual(["codex", "opencode", "claude-code", "antigravity"]);
+    expect(
+      init?.options.some((option) => option.long === "--verifier-model"),
+    ).toBe(true);
   });
 });

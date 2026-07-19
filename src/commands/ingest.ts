@@ -1,6 +1,6 @@
 import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { type Backend, createBackend } from "../backend.js";
+import { type Backend, createBackend, verifierConfig } from "../backend.js";
 import { mapConcurrent } from "../concurrency.js";
 import { OperationalError } from "../errors.js";
 import { extractClaims } from "../extract.js";
@@ -28,7 +28,11 @@ export interface IngestSummary {
 }
 
 interface IngestDependencies {
-  createBackend?: (config: Config, root: string) => Backend;
+  createBackend?: (
+    config: Config,
+    root: string,
+    role: "builder" | "verifier",
+  ) => Backend;
 }
 
 const VERIFICATION_CONCURRENCY = 4;
@@ -72,9 +76,14 @@ export async function ingestCommand(
   const requestedPrdPath = resolve(cwd, prdPath);
   const prd = await readPrd(requestedPrdPath);
   const initialCommit = await getCurrentCommit(root);
-  const backend =
-    dependencies.createBackend?.(config, root) ?? createBackend(config, root);
-  const extractedClaims = await extractClaims(prd.content, backend);
+  const backendFor = (
+    selectedConfig: Config,
+    role: "builder" | "verifier",
+  ): Backend =>
+    dependencies.createBackend?.(selectedConfig, root, role) ??
+    createBackend(selectedConfig, root);
+  const builderBackend = backendFor(config, "builder");
+  const extractedClaims = await extractClaims(prd.content, builderBackend);
   const [previousClaims, state] = await Promise.all([
     readOptionalDriftwatchJson(root, "claims.json", ClaimsSchema, []),
     readDriftwatchJson(root, "state.json", StateSchema),
@@ -83,12 +92,21 @@ export async function ingestCommand(
     extractedClaims,
     previousClaims,
   );
+  const verifierBackend =
+    config.verifierBackend === null && config.verifierModel === null
+      ? builderBackend
+      : backendFor(verifierConfig(config), "verifier");
   const entries = await mapConcurrent(
     claims,
     VERIFICATION_CONCURRENCY,
     async (claim): Promise<[string, MappingEntry]> => {
       const candidates = await findCandidates(root, claim);
-      const verification = await verifyClaim(root, claim, candidates, backend);
+      const verification = await verifyClaim(
+        root,
+        claim,
+        candidates,
+        verifierBackend,
+      );
       return [
         claim.id,
         {

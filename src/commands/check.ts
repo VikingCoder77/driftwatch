@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
-import { type Backend, createBackend } from "../backend.js";
+import { type Backend, createBackend, verifierConfig } from "../backend.js";
 import { OperationalError } from "../errors.js";
 import { findGitRoot, getChangedFiles, getCurrentCommit } from "../git.js";
 import {
@@ -89,7 +89,8 @@ export async function checkCommand(
   const selectedClaims = claimsToCheck(claims, storedMapping, changedFileSet);
   const mapping = { ...storedMapping };
   const backend =
-    dependencies.createBackend?.(config, root) ?? createBackend(config, root);
+    dependencies.createBackend?.(verifierConfig(config), root) ??
+    createBackend(verifierConfig(config), root);
 
   for (const claim of selectedClaims) {
     const candidates = await findCandidates(
