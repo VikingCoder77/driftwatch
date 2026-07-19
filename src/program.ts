@@ -53,11 +53,20 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("check")
     .description("Re-verify claims affected by repository changes")
-    .action(async () => {
-      const summary = await checkCommand(cwd);
-      process.stdout.write(
-        `Checked ${summary.checkedClaimCount} claims at ${summary.commit}\n`,
-      );
+    .option("--ci", "emit read-only CI JSON")
+    .option("--base <git-ref>", "compare against a CI base commit")
+    .action(async (options: { ci?: boolean; base?: string }) => {
+      const summary = await checkCommand(cwd, {
+        ci: options.ci === true,
+        ...(options.base === undefined ? {} : { baseCommit: options.base }),
+      });
+      if (options.ci === true) {
+        process.stdout.write(`${JSON.stringify(summary.ci, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `Checked ${summary.checkedClaimCount} claims at ${summary.commit}\n`,
+        );
+      }
       if (summary.hasViolations) {
         process.exitCode = 1;
       }

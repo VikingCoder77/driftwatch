@@ -35,4 +35,15 @@ describe("createProgram", () => {
       init?.options.some((option) => option.long === "--verifier-model"),
     ).toBe(true);
   });
+
+  it("offers read-only JSON output for CI checks", () => {
+    const check = createProgram("/repo").commands.find(
+      (command) => command.name() === "check",
+    );
+
+    expect(check?.options.some((option) => option.long === "--ci")).toBe(true);
+    expect(check?.options.some((option) => option.long === "--base")).toBe(
+      true,
+    );
+  });
 });

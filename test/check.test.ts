@@ -439,4 +439,95 @@ describe("checkCommand", () => {
     });
     expect(backend.prompts).toHaveLength(1);
   });
+
+  it("returns read-only CI JSON for an explicit base commit", async () => {
+    const repository = await createRepository();
+    await writeFile(join(repository, "limit.ts"), "export const limit = 3;\n");
+    await writeState(repository, "claims.json", [
+      {
+        id: "C1",
+        section: "Limits",
+        text: "The limit is 3.",
+        type: "limit",
+        sourceId: "R1",
+      },
+    ]);
+    await writeState(repository, "mapping.json", {
+      C1: {
+        status: "SATISFIED",
+        file: "limit.ts",
+        lines: "1-1",
+        evidence: "The limit is 3.",
+        checkedAtCommit: "seed",
+      },
+    });
+    const base = await commit(repository, "base");
+    await writeFile(join(repository, "limit.ts"), "export const limit = 5;\n");
+    const head = await commit(repository, "raise limit");
+    await writeState(repository, "state.json", {
+      lastCheckedCommit: base,
+      waivers: {
+        C1: {
+          rationale: "Accepted launch constraint.",
+          waivedAtCommit: head,
+        },
+      },
+    });
+    const mappingBefore = await readFile(
+      join(repository, ".driftwatch/mapping.json"),
+      "utf8",
+    );
+    const stateBefore = await readFile(
+      join(repository, ".driftwatch/state.json"),
+      "utf8",
+    );
+    const backend = new SequenceBackend([
+      JSON.stringify({
+        status: "VIOLATED",
+        file: "limit.ts",
+        lines: "1-1",
+        evidence: "The limit is 5.",
+      }),
+    ]);
+
+    const summary = await checkCommand(repository, {
+      ci: true,
+      baseCommit: base,
+      createBackend: () => backend,
+    });
+
+    expect(summary.hasViolations).toBe(false);
+    expect(summary.ci).toMatchObject({
+      schemaVersion: 1,
+      command: "check",
+      baseCommit: base,
+      commit: head,
+      changedFiles: ["limit.ts"],
+      checkedClaimCount: 1,
+      counts: { violated: 0, waived: 1, notFound: 0, satisfied: 0 },
+      hasViolations: false,
+      results: [
+        {
+          claim: { id: "C1", sourceId: "R1" },
+          mapping: { status: "VIOLATED", checkedAtCommit: head },
+          waiver: { rationale: "Accepted launch constraint." },
+        },
+      ],
+    });
+    await expect(
+      readFile(join(repository, ".driftwatch/mapping.json"), "utf8"),
+    ).resolves.toBe(mappingBefore);
+    await expect(
+      readFile(join(repository, ".driftwatch/state.json"), "utf8"),
+    ).resolves.toBe(stateBefore);
+  });
+
+  it("rejects a CI base outside CI mode", async () => {
+    await expect(
+      checkCommand("/repo", { baseCommit: "origin/main" }),
+    ).rejects.toMatchObject({
+      exitCode: 2,
+      message: "--base requires --ci",
+    });
+  });
 });
