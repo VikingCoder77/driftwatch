@@ -48,7 +48,7 @@ export interface CiCheckResult {
   results: CiClaimResult[];
 }
 
-interface CheckOptions {
+export interface CheckOptions {
   createBackend?: (config: Config, root: string) => Backend;
   ci?: boolean;
   baseCommit?: string;
