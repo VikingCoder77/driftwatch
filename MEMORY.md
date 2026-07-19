@@ -1,12 +1,12 @@
 # Session Memory
 
-**Updated:** 2026-07-18  
+**Updated:** 2026-07-19
 **Repository:** `/Users/tp/NPT AI Solutions/driftwatch`  
 **Branch:** `main`
 
 ## Objective
 
-Build the Driftwatch v1 CLI described by `driftwatch-prd.md`: extract testable PRD claims, locate implementation candidates deterministically, verify claims through the local Codex CLI, incrementally re-check changed code, and render committed drift reports.
+Prepare the Driftwatch v1.2 release candidate described by `driftwatch-prd.md`, including multi-harness inference, auditable waivers, stable PRD re-ingest, independent verification, and read-only CI output.
 
 ## Completed Work
 
@@ -20,6 +20,10 @@ Build the Driftwatch v1 CLI described by `driftwatch-prd.md`: extract testable P
 - Full ingest, Git-diff incremental checks, `NOT_FOUND` retry behavior, and HEAD-change protection.
 - Markdown report generation written identically to stdout and `.driftwatch/DRIFT.md`.
 - Atomic state-file writes inside `.driftwatch/`.
+- Committed waiver rationales with waiver-aware reports and exit codes.
+- PRD re-ingest diff counts with stable claim identity and stale-waiver pruning.
+- Independent builder/verifier harness and model selection.
+- Versioned, read-only `check --ci` JSON with explicit Git baselines.
 
 ## Commits
 
@@ -28,13 +32,20 @@ Build the Driftwatch v1 CLI described by `driftwatch-prd.md`: extract testable P
 - `c1a42c4` — Implement end-to-end claim ingest
 - `ef9035d` — Add incremental drift checks
 - `81c5f23` — Render stored drift reports
+- `db0408d` — Extend state for release features
+- `df1ea9a` — Add committed claim waivers
+- `0e83b8f` — Preserve claim identity on re-ingest
+- `3f9218f` — Add independent verifier backends
+- `d387722` — Add read-only CI check mode
+- `a9b405f` — Export CI check options
+- `d754fa0` — Document release workflow features
 
-The working tree was clean after `81c5f23`.
+The working tree was clean after release-feature validation.
 
 ## Validation
 
 - `npm --script-shell=/bin/sh run lint`
-- `npm --script-shell=/bin/sh test` — 55 tests across 14 files
+- `npm --script-shell=/bin/sh test` — 68 tests across 15 files
 - `npm --script-shell=/bin/sh run build`
 - CLI help smoke checks for all commands
 - `git diff --check`
@@ -47,6 +58,14 @@ The explicit script shell is needed because the managed environment's reduced `P
 1. Review npm publication metadata and publish the package when credentials and final versioning are ready.
 2. Run Driftwatch against its own full PRD and compare extracted claims with the numbered requirements.
 3. Prepare final challenge video and submission materials without adding new product scope.
+
+## Release Workflow Features
+
+- Waivers are managed through `report --waive <id> --reason <text>` and `report --unwaive <id>`, remain visible in a dedicated report section, and suppress exit code 1 only for the waived claim.
+- Extraction records explicit PRD requirement identifiers as `sourceId`; re-ingest preserves ids by `sourceId`, falls back to normalized claim content, and reports added/changed/removed/unchanged counts.
+- `init` accepts `--verifier-backend` and `--verifier-model`; extraction uses the builder while ingest verification and checks use the verifier.
+- `check --ci [--base <git-ref>]` returns schema-versioned JSON without writing mapping or state. An executable smoke test confirmed unchanged file hashes, one waived result, and correct exit behavior.
+- The PRD is version 1.2 with 50 sequential acceptance requirements, including `R45` through `R50` for these release features.
 
 ## Live Codex Validation
 
