@@ -1,8 +1,9 @@
-import type { Claim, MappingEntry, State } from "./schemas.js";
+import type { Claim, MappingEntry, State, Waiver } from "./schemas.js";
 
 interface ReportClaim {
   claim: Claim;
   entry: MappingEntry;
+  waiver: Waiver | undefined;
 }
 
 export interface RenderedReport {
@@ -68,9 +69,13 @@ export function renderDriftReport(
       evidence: "No verification result is stored.",
       checkedAtCommit: "unknown",
     },
+    waiver: state.waivers[claim.id],
   }));
   const violated = reportClaims.filter(
-    ({ entry }) => entry.status === "VIOLATED",
+    ({ entry, waiver }) => entry.status === "VIOLATED" && waiver === undefined,
+  );
+  const waived = reportClaims.filter(
+    ({ entry, waiver }) => entry.status === "VIOLATED" && waiver !== undefined,
   );
   const unimplemented = reportClaims.filter(
     ({ entry }) => entry.status === "NOT_FOUND",
@@ -84,7 +89,7 @@ export function renderDriftReport(
     "# Driftwatch Report",
     "",
     `Commit: \`${commit}\``,
-    `Totals: ❌ ${violated.length} violated · ⚠️ ${unimplemented.length} unimplemented · ✅ ${satisfied.length} satisfied`,
+    `Totals: ❌ ${violated.length} violated · 🟦 ${waived.length} waived · ⚠️ ${unimplemented.length} unimplemented · ✅ ${satisfied.length} satisfied`,
     "",
     "## Violated (❌)",
     "",
@@ -95,6 +100,18 @@ export function renderDriftReport(
         escapeCell(claim.text),
         location(entry),
         escapeCell(entry.evidence),
+      ]),
+    ),
+    "",
+    "## Waived (🟦)",
+    "",
+    table(
+      ["Claim", "Requirement", "Location", "Rationale"],
+      waived.map(({ claim, entry, waiver }) => [
+        escapeCell(claim.id),
+        escapeCell(claim.text),
+        location(entry),
+        escapeCell(waiver?.rationale ?? "—"),
       ]),
     ),
     "",

@@ -3,6 +3,7 @@ import { checkCommand } from "./commands/check.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
 import { reportCommand } from "./commands/report.js";
+import { OperationalError } from "./errors.js";
 import { type BackendName, BackendNameSchema } from "./schemas.js";
 
 export function createProgram(cwd = process.cwd()): Command {
@@ -51,13 +52,37 @@ export function createProgram(cwd = process.cwd()): Command {
   program
     .command("report")
     .description("Render the current drift report")
-    .action(async () => {
-      const report = await reportCommand(cwd);
-      process.stdout.write(report.content);
-      if (report.hasViolations) {
-        process.exitCode = 1;
-      }
-    });
+    .option("--waive <claim-id>", "waive one claim")
+    .option("--reason <text>", "committed waiver rationale")
+    .option("--unwaive <claim-id>", "remove one waiver")
+    .action(
+      async (options: {
+        waive?: string;
+        reason?: string;
+        unwaive?: string;
+      }) => {
+        if (options.reason !== undefined && options.waive === undefined) {
+          throw new OperationalError("--reason requires --waive");
+        }
+        const report = await reportCommand(cwd, {
+          ...(options.waive === undefined
+            ? {}
+            : {
+                waive: {
+                  claimId: options.waive,
+                  rationale: options.reason ?? "",
+                },
+              }),
+          ...(options.unwaive === undefined
+            ? {}
+            : { unwaive: options.unwaive }),
+        });
+        process.stdout.write(report.content);
+        if (report.hasViolations) {
+          process.exitCode = 1;
+        }
+      },
+    );
 
   return program;
 }

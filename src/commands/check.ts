@@ -117,8 +117,9 @@ export async function checkCommand(
   return {
     checkedClaimCount: selectedClaims.length,
     commit: currentCommit,
-    hasViolations: Object.values(mapping).some(
-      (entry) => entry.status === "VIOLATED",
+    hasViolations: Object.entries(mapping).some(
+      ([claimId, entry]) =>
+        entry.status === "VIOLATED" && state.waivers[claimId] === undefined,
     ),
   };
 }

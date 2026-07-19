@@ -348,4 +348,48 @@ describe("checkCommand", () => {
     });
     expect(backend.prompts).toHaveLength(6);
   });
+
+  it("does not fail when every violation is waived", async () => {
+    const repository = await createRepository();
+    await writeFile(join(repository, "limit.ts"), "export const limit = 5;\n");
+    await writeState(repository, "claims.json", [
+      {
+        id: "C1",
+        section: "Limits",
+        text: "The limit is 3.",
+        type: "limit",
+      },
+    ]);
+    await writeState(repository, "mapping.json", {
+      C1: {
+        status: "VIOLATED",
+        file: "limit.ts",
+        lines: "1-1",
+        evidence: "The limit is 5.",
+        checkedAtCommit: "seed",
+      },
+    });
+    const head = await commit(repository, "fixture");
+    await writeState(repository, "state.json", {
+      lastCheckedCommit: head,
+      waivers: {
+        C1: {
+          rationale: "Accepted launch constraint.",
+          waivedAtCommit: head,
+        },
+      },
+    });
+    const backend = new SequenceBackend([]);
+
+    const summary = await checkCommand(repository, {
+      createBackend: () => backend,
+    });
+
+    expect(summary).toEqual({
+      checkedClaimCount: 0,
+      commit: head,
+      hasViolations: false,
+    });
+    expect(backend.prompts).toHaveLength(0);
+  });
 });

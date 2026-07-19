@@ -87,12 +87,15 @@ describe("reportCommand", () => {
     expect(report.hasViolations).toBe(true);
     expect(report.content).toContain("Commit: `abc123`");
     expect(report.content).toContain(
-      "Totals: ❌ 1 violated · ⚠️ 1 unimplemented · ✅ 1 satisfied",
+      "Totals: ❌ 1 violated · 🟦 0 waived · ⚠️ 1 unimplemented · ✅ 1 satisfied",
     );
     expect(report.content).toContain("The limit is 3 \\| exactly.");
     expect(report.content).toContain("…");
     expect(report.content).not.toContain("`requirement`");
     expect(report.content.indexOf("## Violated")).toBeLessThan(
+      report.content.indexOf("## Waived"),
+    );
+    expect(report.content.indexOf("## Waived")).toBeLessThan(
       report.content.indexOf("## Unimplemented"),
     );
     expect(report.content.indexOf("## Unimplemented")).toBeLessThan(
@@ -101,5 +104,74 @@ describe("reportCommand", () => {
     await expect(
       readFile(join(repository, ".driftwatch/DRIFT.md"), "utf8"),
     ).resolves.toBe(report.content);
+  });
+
+  it("stores and removes a committed waiver rationale", async () => {
+    const repository = await mkdtemp(join(tmpdir(), "driftwatch-waiver-"));
+    temporaryDirectories.push(repository);
+    await execFileAsync("git", ["init", "--quiet"], { cwd: repository });
+    await initCommand(repository);
+    await writeState(repository, "claims.json", [
+      {
+        id: "C1",
+        section: "Limits",
+        text: "The limit is 3.",
+        type: "limit",
+      },
+    ]);
+    await writeState(repository, "mapping.json", {
+      C1: {
+        status: "VIOLATED",
+        file: "src/limit.ts",
+        lines: "1-1",
+        evidence: "The limit is 5.",
+        checkedAtCommit: "seed",
+      },
+    });
+    await writeFile(join(repository, "README.md"), "fixture\n");
+    await execFileAsync("git", ["add", "."], { cwd: repository });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=Driftwatch Tests",
+        "-c",
+        "user.email=tests@driftwatch.local",
+        "commit",
+        "--quiet",
+        "-m",
+        "fixture",
+      ],
+      { cwd: repository },
+    );
+    const head = (
+      await execFileAsync("git", ["rev-parse", "HEAD"], {
+        cwd: repository,
+        encoding: "utf8",
+      })
+    ).stdout.trim();
+
+    const waivedReport = await reportCommand(repository, {
+      waive: { claimId: "C1", rationale: "Accepted launch constraint." },
+    });
+
+    expect(waivedReport.hasViolations).toBe(false);
+    expect(waivedReport.content).toContain("🟦 1 waived");
+    expect(waivedReport.content).toContain("Accepted launch constraint.");
+    const waivedState = JSON.parse(
+      await readFile(join(repository, ".driftwatch/state.json"), "utf8"),
+    );
+    expect(waivedState.waivers.C1).toEqual({
+      rationale: "Accepted launch constraint.",
+      waivedAtCommit: head,
+    });
+
+    const unwaivedReport = await reportCommand(repository, { unwaive: "C1" });
+
+    expect(unwaivedReport.hasViolations).toBe(true);
+    const unwaivedState = JSON.parse(
+      await readFile(join(repository, ".driftwatch/state.json"), "utf8"),
+    );
+    expect(unwaivedState.waivers).toEqual({});
   });
 });
