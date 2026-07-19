@@ -1,5 +1,7 @@
 {
   "backend": "codex",
   "model": "gpt-5.6-sol",
+  "verifierBackend": null,
+  "verifierModel": null,
   "prdPath": "demo/PRD.md"
 }

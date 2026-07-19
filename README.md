@@ -17,11 +17,11 @@ A violated claim prints with enough context that your next prompt to the agent i
 
 ## How it works
 
-1. **`driftwatch ingest <prd.md>`** — extracts every testable assertion from the PRD into `claims.json`, finds up to three candidate files per claim with ripgrep, and verifies each claim through a fresh local agent: `SATISFIED`, `VIOLATED`, or `NOT_FOUND`, with evidence.
-2. **`driftwatch check`** — the daily driver. Re-verifies only claims whose mapped files changed since the last checked commit (via `git diff`), and retries unmapped claims against changed files. Seconds, not a re-scan.
-3. **`driftwatch report`** — prints the current status with no inference and writes the same content to `.driftwatch/DRIFT.md`. Exits `1` if any claim is violated, so it drops straight into CI.
+1. **`driftwatch ingest <prd.md>`** — extracts every testable assertion, preserves claim identities across PRD revisions, reports the re-ingest diff, and fully verifies the current claim set.
+2. **`driftwatch check`** — re-verifies mapped claims affected by the Git diff and retries unmapped claims. `--ci` emits read-only JSON for automation.
+3. **`driftwatch report`** — renders the stored result with no inference. Violations can be waived only with a rationale committed in `state.json`.
 
-Verification always runs in a clean agent with zero memory of the session that wrote the code. The agent that built a feature will rationalize its own drift; a cold reader won't.
+Verification always runs in a clean agent with zero memory of the session that wrote the code. Configure a different verifier harness or model when the builder must not grade its own work.
 
 All state (`claims.json`, `mapping.json`, `state.json`) is human-readable JSON at the Git repository root under `.driftwatch/`, intended to be committed. Driftwatch never modifies files outside that directory, contains no API keys, and makes no network calls of its own — all inference is delegated to the harness already installed on your machine.
 
@@ -34,7 +34,7 @@ npm install
 npm run dev -- ingest demo/PRD.md && npm run dev -- report
 ```
 
-Expected summary: `3 violated · 0 unimplemented · 3 satisfied`. The violations in `demo/` are intentionally seeded; `report` exits with code `1` and writes `.driftwatch/DRIFT.md`.
+Expected summary: `3 violated · 0 waived · 0 unimplemented · 3 satisfied`. The violations in `demo/` are intentionally seeded; `report` exits with code `1` and writes `.driftwatch/DRIFT.md`.
 
 Quick smoke test without cloning anything:
 
@@ -58,7 +58,7 @@ Driftwatch is Codex-first and validated end-to-end with Codex + GPT-5.6 Sol. The
 | `claude-code` | [`claude`](https://code.claude.com/docs/en/headless) | `driftwatch init --backend claude-code --model sonnet` |
 | `antigravity` | [`agy`](https://antigravity.google/docs/cli-reference) | `driftwatch init --backend antigravity --model "Gemini 3.5 Flash (Low)"` |
 
-Omit `--model` to use the harness's configured default. Release validation ran the full demo on Codex, OpenCode 1.14.50, and Antigravity 1.0.13 — each produced the identical `3 violated · 0 unimplemented · 3 satisfied` report. Claude Code 2.1.214 accepts the configured non-interactive flags; full validation is tracked for v0.2.
+Omit `--model` to use the harness's configured default. Release validation ran the full demo on Codex, OpenCode 1.14.50, and Antigravity 1.0.13 — each produced the identical `3 violated · 0 waived · 0 unimplemented · 3 satisfied` report. Claude Code 2.1.214 accepts the configured non-interactive flags; full validation is tracked for v0.2.
 
 **macOS note:** the ChatGPT desktop app bundles Codex. If `codex --version` is not found:
 
@@ -85,15 +85,19 @@ node dist/cli.js --help
 ## Usage
 
 ```sh
-driftwatch init [--backend <name>] [--model <model>]   # creates .driftwatch/ at the repo root
-driftwatch ingest <path-to-prd.md>                     # extract claims + full verification pass
-driftwatch check                                        # incremental re-verification off git diff
-driftwatch report                                       # print status, write DRIFT.md, exit 1 on violations
+driftwatch init [--backend <name>] [--model <model>] [--verifier-backend <name>] [--verifier-model <model>]
+driftwatch ingest <path-to-prd.md>                      # reconcile claims + full verification pass
+driftwatch check                                         # incremental verification and state update
+driftwatch check --ci [--base <git-ref>]                # read-only, versioned JSON for CI
+driftwatch report --waive C7 --reason "Accepted until migration completes"
+driftwatch report --unwaive C7
 ```
 
-The v1 interface is exactly these four commands. To switch harnesses in an initialized repository, edit `.driftwatch/config.json`: set `backend` and set `model` to a harness-specific string or `null` for its default. Driftwatch invokes harnesses non-interactively and restricts their tools to read-only wherever the CLI exposes a mechanism for it.
+The interface remains exactly four commands. To change an initialized repository, edit `.driftwatch/config.json`: `backend`/`model` select the builder and `verifierBackend`/`verifierModel` optionally select an independent verifier. A null model uses the harness default. Driftwatch invokes harnesses non-interactively and restricts their tools to read-only wherever the CLI exposes a mechanism for it.
 
-The complete product contract, including all 44 numbered acceptance requirements, lives in [`driftwatch-prd.md`](driftwatch-prd.md) — which is also the first PRD Driftwatch was run against.
+`check --ci` never updates `.driftwatch/`. Its JSON includes commits, changed files, status counts, mappings, and waiver metadata; it exits `1` only for unwaived violations. Use `--base origin/main`, `--base "$BASE_SHA"`, or another Git ref supplied by your CI provider.
+
+The complete product contract, including all 50 numbered acceptance requirements, lives in [`driftwatch-prd.md`](driftwatch-prd.md) — which is also the first PRD Driftwatch was run against.
 
 ## What Driftwatch is not
 
@@ -113,7 +117,7 @@ Driftwatch was designed and implemented entirely through Codex sessions using GP
 
 ## Roadmap
 
-Waivers with committed rationale, PRD re-ingest diffing with claim identity carry-over, cross-model verification (verifier ≠ builder), and a CI-native mode. The state format already supports all of it.
+Hosted pull-request annotations, multi-PRD workspaces, direct provider APIs, and richer machine-readable report formats.
 
 ## License
 

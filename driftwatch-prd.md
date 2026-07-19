@@ -1,6 +1,6 @@
 # Driftwatch — Product Requirements Document
 
-**Version:** 1.1 (Hackathon v1 — OpenAI Codex Challenge, Developer Tools track)
+**Version:** 1.2 (Release candidate — OpenAI Codex Challenge, Developer Tools track)
 **Status:** Approved for build
 **Owner:** Thomas / NPT Solutions
 **Build window:** 6 days, built entirely in Codex with GPT-5.6
@@ -24,8 +24,7 @@ AI coding agents write code faster than humans can verify it against intent. A d
 
 - NG1: Driftwatch does not auto-fix violations. It reports; the developer or their agent fixes.
 - NG2: No direct provider API integrations or API-key handling. Inference is available only through supported, locally installed harness CLIs.
-- NG3: No waiver system and no PRD re-ingest diffing. Re-running `ingest` performs a full replacement of claims. *Rationale: real-product features, not demo features.*
-- NG4: No CI-specific mode, no GitHub/GitLab integration, no web UI, no multi-PRD support.
+- NG3: No hosted GitHub/GitLab integration, web UI, or multi-PRD support. CI integration is provider-neutral JSON and exit codes.
 - NG5: No configuration server or telemetry. All state is local files committed to the repo.
 
 ## 4. User Stories
@@ -35,6 +34,8 @@ AI coding agents write code faster than humans can verify it against intent. A d
 - US3: As a developer reviewing a drift report, I want file-and-line evidence for each violation so I can judge it in seconds without re-reading the PRD.
 - US4: As a hackathon judge, I want to clone the repo, run two commands, and see a real drift report on sample data.
 - US5: As a developer, I want unimplemented claims listed separately from violations so early-stage repos are not drowned in noise.
+- US6: As a reviewer, I want an accepted violation to carry a committed rationale so exceptions remain visible and auditable.
+- US7: As a CI job, I want read-only structured results against an explicit base commit so checks never dirty the checkout.
 
 ## 5. Product Overview
 
@@ -44,25 +45,25 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 
 - R1: The CLI binary is named `driftwatch`.
 - R2: The CLI provides exactly four commands in v1: `init`, `ingest`, `check`, and `report`.
-- R3: `driftwatch init [--backend <name>] [--model <model>]` creates a `.driftwatch/` directory at the repository root containing `config.json` and an empty `state.json`. If `.driftwatch/` already exists, `init` exits with code 2 and does not overwrite anything.
-- R4: `driftwatch ingest <path-to-prd.md>` extracts claims from the given Markdown file and writes them to `.driftwatch/claims.json`, fully replacing any previous contents.
+- R3: `driftwatch init [--backend <name>] [--model <model>] [--verifier-backend <name>] [--verifier-model <model>]` creates a `.driftwatch/` directory at the repository root containing `config.json` and an empty `state.json`. If `.driftwatch/` already exists, `init` exits with code 2 and does not overwrite anything.
+- R4: `driftwatch ingest <path-to-prd.md>` extracts claims from the given Markdown file, reconciles them with any existing claims, and writes the current set to `.driftwatch/claims.json`.
 - R5: `driftwatch ingest` then performs a full mapping pass: for every claim, it locates candidate files and verifies each claim against them, writing results to `.driftwatch/mapping.json`.
 - R6: `driftwatch check` re-verifies only the claims whose mapped files appear in `git diff --name-only <last-checked-commit>..HEAD`, plus attempts to map any currently unmapped (`NOT_FOUND`) claims against files in that diff.
-- R7: After a successful `check`, driftwatch records the current HEAD commit hash in `.driftwatch/state.json` as `lastCheckedCommit`.
+- R7: After a successful non-CI `check`, driftwatch records the current HEAD commit hash in `.driftwatch/state.json` as `lastCheckedCommit`.
 - R8: If `state.json` contains no `lastCheckedCommit` (first run), `check` behaves as a full mapping pass over all claims.
-- R9: `driftwatch report` prints the current status of all claims from `mapping.json` without performing any inference, and also writes the same content as Markdown to `.driftwatch/DRIFT.md`.
+- R9: `driftwatch report` prints the current status of all claims from `mapping.json` without performing any inference, and also writes the same content as Markdown to `.driftwatch/DRIFT.md`; `--waive <claim-id> --reason <text>` and `--unwaive <claim-id>` manage committed exceptions.
 
 ### 5.2 Exit Codes
 
-- R10: `check` and `report` exit with code 0 when no claim has status `VIOLATED`.
-- R11: `check` and `report` exit with code 1 when at least one claim has status `VIOLATED`.
+- R10: `check` and `report` exit with code 0 when no unwaived claim has status `VIOLATED`.
+- R11: `check` and `report` exit with code 1 when at least one unwaived claim has status `VIOLATED`.
 - R12: Claims with status `NOT_FOUND` (unimplemented) never cause a non-zero exit code.
 - R13: Operational failures (selected harness CLI not found, not a git repository, missing `claims.json`) exit with code 2 and print a one-line actionable error message.
 
 ### 5.3 Claim Extraction
 
 - R14: Claim extraction sends the full PRD text to the model in a single prompt whose instructions require extracting every testable assertion, ignoring vision statements and market context, and preserving each explicitly numbered source requirement as exactly one claim.
-- R15: Each extracted claim is stored with fields: `id` (string, stable within one ingest, format `C<number>`), `section` (the PRD heading it came from), `text` (the assertion, quoted or minimally normalized), and `type`.
+- R15: Each extracted claim is stored with fields: `id` (stable format `C<number>`), `section` (the PRD heading it came from), `text` (the assertion, quoted or minimally normalized), `type`, and optional nullable `sourceId` for an explicit source requirement identifier.
 - R16: The `type` field is one of exactly: `behavior`, `data-model`, `api-contract`, `limit`, `config`, `cli`.
 - R17: The extraction prompt requires the model to respond with only a JSON array matching the claim schema, with no surrounding prose.
 - R18: Driftwatch validates the model's extraction output against the claim JSON schema; on validation failure it retries exactly once with a corrective prompt, and on second failure exits with code 2.
@@ -88,11 +89,11 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 - R29: Driftwatch extracts the first syntactically valid JSON value (fenced or raw) from the backend's stdout before schema validation, discarding any surrounding text.
 - R30: Every inference prompt ends with an instruction to respond with only JSON matching the given schema.
 - R31: If the selected harness executable is not found on PATH, driftwatch exits with code 2 and a message naming the missing CLI and executable.
-- R32: The selected harness and model are read from `config.json`; a non-null `model` is passed using that harness's model flag, while `null` uses its configured default. The shipped default is Codex with GPT‑5.6 Sol (`gpt-5.6-sol`).
+- R32: The selected builder harness and model are read from `config.json`; a non-null `model` is passed using that harness's model flag, while `null` uses its configured default. Optional verifier fields select an independent verification harness or model. The shipped builder default is Codex with GPT‑5.6 Sol (`gpt-5.6-sol`).
 
 ### 5.7 Report Output
 
-- R33: The terminal report groups claims into three sections in this order: Violated (❌), Unimplemented (⚠️), Satisfied (✅).
+- R33: The terminal report groups claims into four sections in this order: Violated (❌), Waived (🟦), Unimplemented (⚠️), Satisfied (✅).
 - R34: Each violated claim renders with: claim id, claim text, file:line evidence location, and the one-sentence evidence.
 - R35: Satisfied claims render as single compact lines (id, truncated text, file:line).
 - R36: The report header includes total counts per status and the commit hash the results reflect.
@@ -100,7 +101,7 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 
 ### 5.8 State & Config Files
 
-- R38: `.driftwatch/config.json` contains `backend` (one of `"codex"`, `"opencode"`, `"claude-code"`, or `"antigravity"`), `model` (a non-empty string or null), and `prdPath` (recorded by the most recent `ingest`).
+- R38: `.driftwatch/config.json` contains `backend`, `model`, optional nullable `verifierBackend` and `verifierModel`, and `prdPath` recorded by the most recent `ingest`; backend values are one of `"codex"`, `"opencode"`, `"claude-code"`, or `"antigravity"`.
 - R39: All three state files (`claims.json`, `mapping.json`, `state.json`) are plain JSON, human-readable, and intended to be committed to version control.
 - R40: Driftwatch never modifies any file outside the `.driftwatch/` directory.
 
@@ -110,6 +111,15 @@ Driftwatch is a command-line tool. It maintains three pieces of durable state in
 - R42: The repository includes a `demo/` directory containing a small sample service, its PRD, and pre-seeded drift, such that `driftwatch ingest demo/PRD.md && driftwatch report`, run from the repository root, surfaces at least 3 genuine violations.
 - R43: The README leads with a two-sentence problem statement, an animated GIF of a drift report, install instructions, and a "test in 2 commands" section for judges.
 - R44: The README documents where Codex and GPT-5.6 were used during development, including the primary Codex session, per challenge submission requirements.
+
+### 6.1 Release Features
+
+- R45: A waiver is stored in `state.json` by claim id with a non-empty rationale and the HEAD commit at which it was created; waived violations remain visible but do not cause exit code 1.
+- R46: Re-ingest preserves a prior claim id when `sourceId` matches, falling back to normalized section, text, and type for claims without stable source identifiers; new claims receive monotonically increasing ids.
+- R47: Re-ingest reports added, changed, removed, and unchanged claim counts, and removes waivers whose claim ids no longer exist.
+- R48: When verifier settings are present, extraction uses the builder backend while ingest verification and incremental checks use the independently configured verifier; absent verifier settings preserve the single-backend behavior.
+- R49: `driftwatch check --ci [--base <git-ref>]` emits versioned JSON, uses the explicit base or stored baseline, preserves waiver-aware exit codes, and does not write `mapping.json` or `state.json`.
+- R50: CI JSON includes the base and HEAD commits, changed files, checked count, status counts, overall violation result, and every claim's current mapping and waiver metadata.
 
 ## 7. Success Metrics
 
@@ -122,7 +132,7 @@ Hackathon framing — leading indicators only:
 
 ## 8. Open Questions
 
-- Q1 (blocking before release): Complete authenticated live smoke tests for OpenCode, Claude Code, and Antigravity on machines where those CLIs are installed.
+- Q1 (blocking before release): Complete an authenticated full-demo smoke test for Claude Code on a machine where the CLI is logged in; Codex, OpenCode, and Antigravity are validated.
 - Q2 (non-blocking): Whether extraction quality improves by sending the PRD per-section rather than whole-document; time-boxed to a 2-hour experiment on Day 3 if extraction is noisy.
 - Q3 (non-blocking): Minimum viable chunking strategy for very large files — start with R25's rule; revisit only if demo repo needs it.
 
@@ -130,6 +140,6 @@ Hackathon framing — leading indicators only:
 
 Six days, fixed by the challenge deadline. Day 1: schemas + extraction + backend. Day 2: candidate search + verification. Day 3: check/report + self-dogfood. Day 4: demo repo + prompt tuning. Day 5: packaging, README, fix-loop demo. Day 6: video and submission — no new code.
 
-## 10. Roadmap (post-hackathon, explicitly not v1)
+## 10. Roadmap
 
-Waivers with committed rationale, PRD re-ingest diffing with claim identity carry-over, additional named harness adapters, optional raw APIs for CI, cross-model verification ("verifier ≠ builder"), and a CI-native mode.
+Hosted pull-request annotations, multi-PRD workspaces, direct provider APIs, and richer machine-readable report formats.
