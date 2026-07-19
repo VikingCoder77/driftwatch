@@ -42,6 +42,24 @@ export async function readDriftwatchJson<T>(
   return parseStoredJson(input, schema, fileName);
 }
 
+export async function readOptionalDriftwatchJson<T>(
+  root: string,
+  fileName: DriftwatchFileName,
+  schema: z.ZodType<T>,
+  fallback: T,
+): Promise<T> {
+  let input: string;
+  try {
+    input = await readFile(driftwatchPath(root, fileName), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return fallback;
+    }
+    throw new OperationalError(`could not read ${fileName}`, { cause: error });
+  }
+  return parseStoredJson(input, schema, fileName);
+}
+
 export async function writeDriftwatchJson(
   root: string,
   fileName: DriftwatchFileName,

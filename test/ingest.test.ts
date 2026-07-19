@@ -22,6 +22,17 @@ class SequenceBackend implements Backend {
   }
 }
 
+async function writeState(
+  directory: string,
+  fileName: string,
+  value: unknown,
+): Promise<void> {
+  await writeFile(
+    join(directory, ".driftwatch", fileName),
+    `${JSON.stringify(value, null, 2)}\n`,
+  );
+}
+
 async function createCommittedRepository(): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "driftwatch-ingest-"));
   temporaryDirectories.push(directory);
@@ -87,7 +98,11 @@ describe("ingestCommand", () => {
     const commit = (
       await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repository })
     ).stdout.trim();
-    expect(summary).toEqual({ claimCount: 1, commit });
+    expect(summary).toEqual({
+      claimCount: 1,
+      commit,
+      changes: { added: 1, changed: 0, removed: 0, unchanged: 0 },
+    });
     expect(backend.prompts).toHaveLength(2);
     const storedClaims = JSON.parse(
       await readFile(join(repository, ".driftwatch/claims.json"), "utf8"),
@@ -121,5 +136,88 @@ describe("ingestCommand", () => {
     await expect(readFile(claimsPath, "utf8")).resolves.toBe(
       '[{"existing":true}]\n',
     );
+  });
+
+  it("carries claim identity across PRD revisions and prunes stale waivers", async () => {
+    const repository = await createCommittedRepository();
+    await writeState(repository, "claims.json", [
+      {
+        id: "C7",
+        section: "Service",
+        text: "The handler returns pong.",
+        type: "behavior",
+        sourceId: "R1",
+      },
+      {
+        id: "C8",
+        section: "Legacy",
+        text: "The legacy endpoint exists.",
+        type: "api-contract",
+        sourceId: "R2",
+      },
+    ]);
+    const head = (
+      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repository })
+    ).stdout.trim();
+    await writeState(repository, "state.json", {
+      waivers: {
+        C7: { rationale: "Temporary migration.", waivedAtCommit: head },
+        C8: { rationale: "Legacy exception.", waivedAtCommit: head },
+      },
+    });
+    const backend = new SequenceBackend([
+      JSON.stringify([
+        {
+          id: "C1",
+          section: "Service",
+          text: "The handler returns ready.",
+          type: "behavior",
+          sourceId: "R1",
+        },
+        {
+          id: "C2",
+          section: "Health",
+          text: "The health endpoint returns ok.",
+          type: "api-contract",
+          sourceId: "R3",
+        },
+      ]),
+      JSON.stringify({
+        status: "SATISFIED",
+        file: "service.ts",
+        lines: "1-1",
+        evidence: "The handler is present.",
+      }),
+      JSON.stringify({
+        status: "NOT_FOUND",
+        file: null,
+        lines: null,
+        evidence: "No health endpoint exists.",
+      }),
+    ]);
+
+    const summary = await ingestCommand(repository, "PRD.md", {
+      createBackend: () => backend,
+    });
+
+    expect(summary.changes).toEqual({
+      added: 1,
+      changed: 1,
+      removed: 1,
+      unchanged: 0,
+    });
+    const storedClaims = JSON.parse(
+      await readFile(join(repository, ".driftwatch/claims.json"), "utf8"),
+    );
+    expect(storedClaims.map(({ id }: { id: string }) => id)).toEqual([
+      "C7",
+      "C9",
+    ]);
+    const state = JSON.parse(
+      await readFile(join(repository, ".driftwatch/state.json"), "utf8"),
+    );
+    expect(state.waivers).toEqual({
+      C7: { rationale: "Temporary migration.", waivedAtCommit: head },
+    });
   });
 });

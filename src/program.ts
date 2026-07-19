@@ -32,7 +32,7 @@ export function createProgram(cwd = process.cwd()): Command {
     .action(async (prd: string) => {
       const summary = await ingestCommand(cwd, prd);
       process.stdout.write(
-        `Ingested ${summary.claimCount} claims at ${summary.commit}\n`,
+        `Ingested ${summary.claimCount} claims at ${summary.commit} (${summary.changes.added} added, ${summary.changes.changed} changed, ${summary.changes.removed} removed, ${summary.changes.unchanged} unchanged)\n`,
       );
     });
 

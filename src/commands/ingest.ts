@@ -5,14 +5,26 @@ import { mapConcurrent } from "../concurrency.js";
 import { OperationalError } from "../errors.js";
 import { extractClaims } from "../extract.js";
 import { findGitRoot, getCurrentCommit } from "../git.js";
-import { type Config, ConfigSchema, type MappingEntry } from "../schemas.js";
+import { type ClaimChanges, reconcileClaimIdentities } from "../identity.js";
+import {
+  ClaimsSchema,
+  type Config,
+  ConfigSchema,
+  type MappingEntry,
+  StateSchema,
+} from "../schemas.js";
 import { findCandidates } from "../search.js";
-import { readDriftwatchJson, writeDriftwatchJson } from "../storage.js";
+import {
+  readDriftwatchJson,
+  readOptionalDriftwatchJson,
+  writeDriftwatchJson,
+} from "../storage.js";
 import { verifyClaim } from "../verify.js";
 
 export interface IngestSummary {
   claimCount: number;
   commit: string;
+  changes: ClaimChanges;
 }
 
 interface IngestDependencies {
@@ -62,7 +74,15 @@ export async function ingestCommand(
   const initialCommit = await getCurrentCommit(root);
   const backend =
     dependencies.createBackend?.(config, root) ?? createBackend(config, root);
-  const claims = await extractClaims(prd.content, backend);
+  const extractedClaims = await extractClaims(prd.content, backend);
+  const [previousClaims, state] = await Promise.all([
+    readOptionalDriftwatchJson(root, "claims.json", ClaimsSchema, []),
+    readDriftwatchJson(root, "state.json", StateSchema),
+  ]);
+  const { claims, changes } = reconcileClaimIdentities(
+    extractedClaims,
+    previousClaims,
+  );
   const entries = await mapConcurrent(
     claims,
     VERIFICATION_CONCURRENCY,
@@ -89,9 +109,14 @@ export async function ingestCommand(
     ...config,
     prdPath: recordPrdPath(root, prd.path),
   };
+  const claimIds = new Set(claims.map((claim) => claim.id));
+  const waivers = Object.fromEntries(
+    Object.entries(state.waivers).filter(([claimId]) => claimIds.has(claimId)),
+  );
   await writeDriftwatchJson(root, "claims.json", claims);
   await writeDriftwatchJson(root, "mapping.json", mapping);
   await writeDriftwatchJson(root, "config.json", nextConfig);
+  await writeDriftwatchJson(root, "state.json", { ...state, waivers });
 
-  return { claimCount: claims.length, commit: initialCommit };
+  return { claimCount: claims.length, commit: initialCommit, changes };
 }
