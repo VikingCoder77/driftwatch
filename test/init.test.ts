@@ -52,9 +52,11 @@ describe("initCommand", () => {
     expect(config).toEqual({
       backend: "codex",
       model: "gpt-5.6-sol",
+      verifierBackend: null,
+      verifierModel: null,
       prdPath: null,
     });
-    expect(state).toEqual({});
+    expect(state).toEqual({ waivers: {} });
   });
 
   it("does not overwrite an existing Driftwatch directory", async () => {
@@ -80,7 +82,13 @@ describe("initCommand", () => {
         await readFile(join(createdDirectory, "config.json"), "utf8"),
       );
 
-      expect(config).toEqual({ backend, model: null, prdPath: null });
+      expect(config).toEqual({
+        backend,
+        model: null,
+        verifierBackend: null,
+        verifierModel: null,
+        prdPath: null,
+      });
     },
   );
 
@@ -98,6 +106,8 @@ describe("initCommand", () => {
     expect(config).toEqual({
       backend: "claude-code",
       model: "sonnet",
+      verifierBackend: null,
+      verifierModel: null,
       prdPath: null,
     });
   });

@@ -9,7 +9,11 @@ describe("ConfigSchema", () => {
       prdPath: "PRD.md",
     };
 
-    expect(ConfigSchema.parse(config)).toEqual(config);
+    expect(ConfigSchema.parse(config)).toEqual({
+      ...config,
+      verifierBackend: null,
+      verifierModel: null,
+    });
   });
 
   it.each(["opencode", "claude-code", "antigravity"] as const)(
@@ -17,7 +21,11 @@ describe("ConfigSchema", () => {
     (backend) => {
       const config = { backend, model: null, prdPath: null };
 
-      expect(ConfigSchema.parse(config)).toEqual(config);
+      expect(ConfigSchema.parse(config)).toEqual({
+        ...config,
+        verifierBackend: null,
+        verifierModel: null,
+      });
     },
   );
 
@@ -36,5 +44,17 @@ describe("ConfigSchema", () => {
         prdPath: null,
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts dedicated verifier routing", () => {
+    const config = {
+      backend: "codex",
+      model: "gpt-5.6-sol",
+      verifierBackend: "claude-code",
+      verifierModel: "sonnet",
+      prdPath: "PRD.md",
+    };
+
+    expect(ConfigSchema.parse(config)).toEqual(config);
   });
 });

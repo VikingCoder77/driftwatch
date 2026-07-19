@@ -42,9 +42,11 @@ export async function initCommand(
   const config: Config = {
     backend,
     model: options.model ?? DEFAULT_MODELS[backend],
+    verifierBackend: null,
+    verifierModel: null,
     prdPath: null,
   };
-  const state: State = {};
+  const state: State = { waivers: {} };
 
   try {
     await Promise.all([
